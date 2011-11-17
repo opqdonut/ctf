@@ -5,24 +5,28 @@ import Control.Monad
 import Control.Applicative
 import Data.List
 import Data.Array
+import Data.Maybe
 --import Control.Monad.Writer
 
 type Coord = (Int,Int)
 
-data SoldierState = SoldierState {soldierCoord :: Coord
-                                  {-hasGrenade :: Bool-} }
+data SoldierState = SoldierState {soldierCoord :: Coord,
+                                  hasGrenade :: Bool}
                   deriving Show
                     
-data Dir = D | U | L | R
+data Dir = S | D | U | L | R
          deriving Show
 
 type Trans = (Int,Int)
 
 trans :: Dir -> Trans
+trans S = (0,0)
 trans U = (0,-1)
 trans D = (0,1)
 trans L = (-1,0)
 trans R = (1,0)
+
+manhattan (a,b) (c,d) = abs (a-c) + abs (b-d)
                
 (<+>) :: Coord -> Trans -> Coord
 (a,b) <+> (c,d) = (a+c,b+d)
@@ -39,19 +43,28 @@ data Command = Command {commandDirection :: Dir,
                         throwsGrenade :: Maybe Coord}
                deriving Show
 
-moveSoldier :: SoldierState -> Command -> SoldierState
-moveSoldier (SoldierState c) (Command d _) = SoldierState $ move d c
+moveSoldier :: Command -> SoldierState -> SoldierState
+moveSoldier (Command d t) (SoldierState c g) = SoldierState (move d c) g
 
-updateSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> M.Map Name SoldierState
-updateSoldiers = M.intersectionWith moveSoldier
+moveSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> M.Map Name SoldierState
+moveSoldiers ss cs = foldl' f ss $ M.assocs cs
+  where f ss (name,command) = M.update (Just . moveSoldier command) name ss
 
-getGrenades :: M.Map Name Command -> [Grenade]
-getGrenades m = do c <- M.elems m
-                   case throwsGrenade c of (Just coord) -> [Grenade coord 2]
-                                           Nothing -> []
+canThrow :: SoldierState -> Coord -> Bool
+canThrow s c = manhattan (soldierCoord s) c <= 10
+               && hasGrenade s
+
+getGrenades :: M.Map Name SoldierState -> M.Map Name Command -> [Grenade]
+getGrenades ss m = do (name,c) <- M.assocs m
+                      case throwsGrenade c
+                        of (Just coord)
+                             | canThrow (fromJust $ M.lookup name ss) coord -> [Grenade coord 2]
+                             | otherwise -> []
+                           Nothing -> []
                              
 processCommands :: M.Map Name SoldierState -> M.Map Name Command -> (M.Map Name SoldierState, [Grenade])
-processCommands soldiers commands = (updateSoldiers soldiers commands, getGrenades commands)
+processCommands soldiers commands = (new, getGrenades new commands)
+  where new = moveSoldiers soldiers commands
 
 processGrenades :: [Grenade] -> ([Grenade],[Explosion])
 processGrenades gs = (remaining,explosions)
@@ -65,7 +78,7 @@ data Team = Team {soldiers :: M.Map Name SoldierState}
 type Explosion = Coord
 
 kills :: Explosion -> SoldierState -> Bool
-kills (a,b) (SoldierState (c,d)) = abs (a-c) <= 1 && abs (b-d) <= 1
+kills (a,b) (SoldierState (c,d) _) = abs (a-c) <= 1 && abs (b-d) <= 1
 
 updateTeam :: Team
               -> [Explosion] 
@@ -88,21 +101,21 @@ updateGame (Game b at bt gs) acommand bcommand = Game b at' bt' gs'
         (bt',gb) = updateTeam bt explosions bcommand
         gs' = gremaining ++ ga ++ gb
         
-        
+-- -- -- -- -- -- -- -- -- -- --
 
 sampleGame = Game (Board (11,11)) ta tb []
-  where ta = Team $ M.fromList [("A", SoldierState (0,0)),
-                                ("B", SoldierState (0,1)),
-                                ("C", SoldierState (0,2))]
-        tb = Team $ M.fromList [("D", SoldierState (10,0)),
-                                ("E", SoldierState (10,1)),
-                                ("F", SoldierState (10,2))]
+  where ta = Team $ M.fromList [("A", SoldierState (0,0) True),
+                                ("B", SoldierState (0,1) True),
+                                ("C", SoldierState (0,2) True)]
+        tb = Team $ M.fromList [("D", SoldierState (10,0) True),
+                                ("E", SoldierState (10,1) True),
+                                ("F", SoldierState (10,2) True)]
              
 sampleACommands g = M.fromList [("A", Command R Nothing),
                                 ("B", Command R Nothing),
                                 ("C", Command D g)]
 
-sampleBCommands = M.fromList [("D", Command L Nothing),                  
+sampleBCommands = M.fromList [--("D", Command L Nothing),                  
                               ("E", Command L Nothing),
                               ("F", Command L Nothing)]
                                  
@@ -114,7 +127,7 @@ drawGame' g = M.fromList $ bg ++ gs ++ ta ++ tb
         drawGrenade (Grenade c t) = (c,show t)
         ta = map drawSoldier . M.assocs . soldiers $ ateam g
         tb = map drawSoldier . M.assocs . soldiers $ bteam g
-        drawSoldier (name,SoldierState c) = (c,name)
+        drawSoldier (name,s) = (soldierCoord s,name)
         
 drawGame :: Game -> String
 drawGame g = intercalate "\n" $ map (concatMap d) coords
@@ -128,7 +141,7 @@ main = let f x = putStrLn (drawGame x) >> putStrLn "--"
            g = sampleGame
            g' = updateGame g (sampleACommands (Just (8,3))) sampleBCommands
            g'' = updateGame g' (sampleACommands Nothing) sampleBCommands
-           g''' = updateGame g'' (sampleACommands Nothing) sampleBCommands
+           g''' = updateGame g'' (sampleACommands (Just (0,0))) sampleBCommands
            g'''' = updateGame g''' (sampleACommands Nothing) sampleBCommands
        in mapM_ f [g,g',g'',g''',g'''']
               
