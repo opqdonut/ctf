@@ -43,15 +43,17 @@ data Command = Command {commandDirection :: Dir,
                         throwsGrenade :: Maybe Coord}
                deriving Show
 
+type ProcessM = Writer [Grenade]
+
 moveSoldier :: Command -> SoldierState -> SoldierState
 moveSoldier (Command d t) (SoldierState c g) = SoldierState (move d c) g
 
-processSoldier :: SoldierState -> Command -> Writer [Grenade] SoldierState
+processSoldier :: SoldierState -> Command -> ProcessM SoldierState
 processSoldier st c = do hasG <- throw st c
                          let moved = moveSoldier c st
                          return moved {hasGrenade = hasG}
 
-throw :: SoldierState -> Command -> Writer [Grenade] Bool
+throw :: SoldierState -> Command -> ProcessM Bool
 throw st c = case throwsGrenade c
              of Nothing -> return (hasGrenade st)
                 Just coord
@@ -63,9 +65,9 @@ canThrow s c = hasGrenade s
                && manhattan (soldierCoord s) c <= 10
                && hasGrenade s
 
-processSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> Writer [Grenade] (M.Map Name SoldierState)
+processSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> ProcessM (M.Map Name SoldierState)
 processSoldiers ss cs = foldM f ss $ M.assocs cs
-  where f :: M.Map Name SoldierState -> (Name,Command) -> Writer [Grenade] (M.Map Name SoldierState)
+  where f :: M.Map Name SoldierState -> (Name,Command) -> ProcessM (M.Map Name SoldierState)
         f ss (name,command) = case (M.lookup name ss)
                               of Nothing -> return ss
                                  (Just s) -> do s' <- processSoldier s command
@@ -109,17 +111,20 @@ updateGame (Game b at bt gs) acommand bcommand = Game b at' bt' gs'
         (bt',gb) = updateTeam bt explosions bcommand
         gs' = gremaining ++ ga ++ gb
         
+runGame :: Game -> [(M.Map Name Command, M.Map Name Command)] -> [Game]
+runGame = scanl upd 
+  where upd g (ca,cb) = updateGame g ca cb
+        
 drawGame' :: Game -> M.Map Coord String
-drawGame' g = M.fromList $ bg ++ gs ++ ta ++ tb
-  where bg = []
-        gs = map drawGrenade $ grenades g
+drawGame' g = M.unionsWith (\x y -> x ++ "," ++ y) $ map M.fromList [gs,ta,tb]
+  where gs = map drawGrenade $ grenades g
         drawGrenade (Grenade c t) = (c,show t)
         ta = map drawSoldier . M.assocs . soldiers $ ateam g
         tb = map drawSoldier . M.assocs . soldiers $ bteam g
         drawSoldier (name,s) = (soldierCoord s,name)
         
 drawGame :: Game -> String
-drawGame g = intercalate "\n" $ map (concatMap d) coords
+drawGame g = intercalate "\n" $ map (intercalate " " . map d) coords
   where (w,h) = size . board $ g
         coords = map (\x -> map ((,)x) [0..h-1]) [0..w-1]
         drawn = drawGame' g
