@@ -4,6 +4,7 @@ import qualified Data.Map as M
 import Control.Monad
 import Control.Applicative
 import Data.List
+import Data.Array
 --import Control.Monad.Writer
 
 type Coord = (Int,Int)
@@ -74,11 +75,14 @@ updateTeam (Team solds) explosions commands = (Team new, gs)
   where surviving = M.filter (\s -> not $ any (flip kills s) explosions) solds
         (new,gs) = processCommands surviving commands
 
-data Game = Game {ateam :: Team, bteam :: Team, grenades :: [Grenade]}
+data Board = Board {size :: (Int,Int)}
+             deriving Show
+
+data Game = Game {board :: Board, ateam :: Team, bteam :: Team, grenades :: [Grenade]}
             deriving Show
 
 updateGame :: Game -> M.Map Name Command -> M.Map Name Command -> Game
-updateGame (Game at bt gs) acommand bcommand = Game at' bt' gs'
+updateGame (Game b at bt gs) acommand bcommand = Game b at' bt' gs'
   where (gremaining,explosions) = processGrenades gs
         (at',ga) = updateTeam at explosions acommand
         (bt',gb) = updateTeam bt explosions bcommand
@@ -86,7 +90,7 @@ updateGame (Game at bt gs) acommand bcommand = Game at' bt' gs'
         
         
 
-sampleGame = Game ta tb []
+sampleGame = Game (Board (11,11)) ta tb []
   where ta = Team $ M.fromList [("A", SoldierState (0,0)),
                                 ("B", SoldierState (0,1)),
                                 ("C", SoldierState (0,2))]
@@ -102,3 +106,29 @@ sampleBCommands = M.fromList [("D", Command L Nothing),
                               ("E", Command L Nothing),
                               ("F", Command L Nothing)]
                                  
+                  
+drawGame' :: Game -> M.Map Coord String
+drawGame' g = M.fromList $ bg ++ gs ++ ta ++ tb
+  where bg = []
+        gs = map drawGrenade $ grenades g
+        drawGrenade (Grenade c t) = (c,show t)
+        ta = map drawSoldier . M.assocs . soldiers $ ateam g
+        tb = map drawSoldier . M.assocs . soldiers $ bteam g
+        drawSoldier (name,SoldierState c) = (c,name)
+        
+drawGame :: Game -> String
+drawGame g = intercalate "\n" $ map (concatMap d) coords
+  where (w,h) = size . board $ g
+        coords = map (\x -> map ((,)x) [0..h-1]) [0..w-1]
+        drawn = drawGame' g
+        d c = M.findWithDefault "." c drawn
+        
+
+main = let f x = putStrLn (drawGame x) >> putStrLn "--"
+           g = sampleGame
+           g' = updateGame g (sampleACommands (Just (8,3))) sampleBCommands
+           g'' = updateGame g' (sampleACommands Nothing) sampleBCommands
+           g''' = updateGame g'' (sampleACommands Nothing) sampleBCommands
+           g'''' = updateGame g''' (sampleACommands Nothing) sampleBCommands
+       in mapM_ f [g,g',g'',g''',g'''']
+              
