@@ -6,7 +6,7 @@ import Control.Applicative
 import Data.List
 import Data.Array
 import Data.Maybe
---import Control.Monad.Writer
+import Control.Monad.Writer
 
 type Coord = (Int,Int)
 
@@ -46,25 +46,33 @@ data Command = Command {commandDirection :: Dir,
 moveSoldier :: Command -> SoldierState -> SoldierState
 moveSoldier (Command d t) (SoldierState c g) = SoldierState (move d c) g
 
-moveSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> M.Map Name SoldierState
-moveSoldiers ss cs = foldl' f ss $ M.assocs cs
-  where f ss (name,command) = M.update (Just . moveSoldier command) name ss
+processSoldier :: SoldierState -> Command -> Writer [Grenade] SoldierState
+processSoldier st c = do hasG <- throw st c
+                         let moved = moveSoldier c st
+                         return moved {hasGrenade = hasG}
+
+throw :: SoldierState -> Command -> Writer [Grenade] Bool
+throw st c = case throwsGrenade c
+             of Nothing -> return (hasGrenade st)
+                Just coord
+                  | canThrow st coord -> tell [Grenade coord 2] >> return False
+                  | otherwise -> return (hasGrenade st)
 
 canThrow :: SoldierState -> Coord -> Bool
-canThrow s c = manhattan (soldierCoord s) c <= 10
+canThrow s c = hasGrenade s
+               && manhattan (soldierCoord s) c <= 10
                && hasGrenade s
 
-getGrenades :: M.Map Name SoldierState -> M.Map Name Command -> [Grenade]
-getGrenades ss m = do (name,c) <- M.assocs m
-                      case throwsGrenade c
-                        of (Just coord)
-                             | canThrow (fromJust $ M.lookup name ss) coord -> [Grenade coord 2]
-                             | otherwise -> []
-                           Nothing -> []
+processSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> Writer [Grenade] (M.Map Name SoldierState)
+processSoldiers ss cs = foldM f ss $ M.assocs cs
+  where f :: M.Map Name SoldierState -> (Name,Command) -> Writer [Grenade] (M.Map Name SoldierState)
+        f ss (name,command) = case (M.lookup name ss)
+                              of Nothing -> return ss
+                                 (Just s) -> do s' <- processSoldier s command
+                                                return $ M.insert name s' ss
                              
 processCommands :: M.Map Name SoldierState -> M.Map Name Command -> (M.Map Name SoldierState, [Grenade])
-processCommands soldiers commands = (new, getGrenades new commands)
-  where new = moveSoldiers soldiers commands
+processCommands soldiers commands = runWriter $ processSoldiers soldiers commands
 
 processGrenades :: [Grenade] -> ([Grenade],[Explosion])
 processGrenades gs = (remaining,explosions)
@@ -101,25 +109,6 @@ updateGame (Game b at bt gs) acommand bcommand = Game b at' bt' gs'
         (bt',gb) = updateTeam bt explosions bcommand
         gs' = gremaining ++ ga ++ gb
         
--- -- -- -- -- -- -- -- -- -- --
-
-sampleGame = Game (Board (11,11)) ta tb []
-  where ta = Team $ M.fromList [("A", SoldierState (0,0) True),
-                                ("B", SoldierState (0,1) True),
-                                ("C", SoldierState (0,2) True)]
-        tb = Team $ M.fromList [("D", SoldierState (10,0) True),
-                                ("E", SoldierState (10,1) True),
-                                ("F", SoldierState (10,2) True)]
-             
-sampleACommands g = M.fromList [("A", Command R Nothing),
-                                ("B", Command R Nothing),
-                                ("C", Command D g)]
-
-sampleBCommands = M.fromList [--("D", Command L Nothing),                  
-                              ("E", Command L Nothing),
-                              ("F", Command L Nothing)]
-                                 
-                  
 drawGame' :: Game -> M.Map Coord String
 drawGame' g = M.fromList $ bg ++ gs ++ ta ++ tb
   where bg = []
@@ -136,12 +125,3 @@ drawGame g = intercalate "\n" $ map (concatMap d) coords
         drawn = drawGame' g
         d c = M.findWithDefault "." c drawn
         
-
-main = let f x = putStrLn (drawGame x) >> putStrLn "--"
-           g = sampleGame
-           g' = updateGame g (sampleACommands (Just (8,3))) sampleBCommands
-           g'' = updateGame g' (sampleACommands Nothing) sampleBCommands
-           g''' = updateGame g'' (sampleACommands (Just (0,0))) sampleBCommands
-           g'''' = updateGame g''' (sampleACommands Nothing) sampleBCommands
-       in mapM_ f [g,g',g'',g''',g'''']
-              
