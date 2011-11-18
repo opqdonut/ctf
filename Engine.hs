@@ -48,24 +48,24 @@ type ProcessM = RWS Game [Grenade] ()
 runProcessM :: Game -> ProcessM a -> (a,[Grenade])
 runProcessM g x = evalRWS x g ()
 
-validCoordinate :: Game -> Coord -> Bool
-validCoordinate g (x,y) = x >= 0 && y >= 0 && x < w && y < h
+validCoordinate :: Coord -> Game -> Bool
+validCoordinate (x,y) g = x >= 0 && y >= 0 && x < w && y < h
   where (w,h) = size . board $ g
 
 moveSoldier :: Command -> SoldierState -> ProcessM SoldierState
 moveSoldier (Command d t) (SoldierState c g) = 
-  do game <- ask
-     let to = move d c
-         ok = validCoordinate game to
+  do let to = move d c
+     ok <- asks $ validCoordinate to
      return $ SoldierState (if ok then to else c) g
 
 throw :: Command -> SoldierState -> ProcessM SoldierState
-throw c st = case throwsGrenade c
-             of Nothing -> return st
-                Just coord
-                  | canThrow st coord -> tell [Grenade coord 2]
-                                         >> return st {hasGrenade = False}
-                  | otherwise -> return st
+throw (Command _ Nothing) st = return st
+throw (Command _ (Just coord)) st =
+  do cOk <- asks $ validCoordinate coord
+     let tOk = canThrow st coord
+     if (cOk && tOk)
+       then tell [Grenade coord 2] >> return st {hasGrenade = False}
+       else return st
 
 canThrow :: SoldierState -> Coord -> Bool
 canThrow s c = hasGrenade s
