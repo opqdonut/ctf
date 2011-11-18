@@ -27,5 +27,11 @@ main = let f x = putStrLn (drawGame x) >> putStrLn "--"
                     (sampleACommands (Just (8,3)), sampleBCommands),
                     (sampleACommands Nothing, sampleBCommands),
                     (sampleACommands Nothing, sampleBCommands),
-                    (sampleACommands Nothing, sampleBCommands)]
+                    (sampleACommands Nothing, sampleBCommands),
+                    (sampleACommands Nothing, sampleBCommands),
+                    (sampleACommands Nothing, sampleBCommands),
+                    (sampleACommands Nothing, sampleBCommands),
+                    (sampleACommands Nothing, sampleBCommands),
+                    (sampleACommands Nothing, sampleBCommands)
+                    ]
        in mapM_ f $ runGame sampleGame comms

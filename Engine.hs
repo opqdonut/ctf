@@ -6,7 +6,7 @@ import Control.Applicative
 import Data.List
 import Data.Array
 import Data.Maybe
-import Control.Monad.Writer
+import Control.Monad.RWS
 
 type Coord = (Int,Int)
 
@@ -43,38 +43,51 @@ data Command = Command {commandDirection :: Dir,
                         throwsGrenade :: Maybe Coord}
                deriving Show
 
-type ProcessM = Writer [Grenade]
+type ProcessM = RWS Game [Grenade] ()
 
-moveSoldier :: Command -> SoldierState -> SoldierState
-moveSoldier (Command d t) (SoldierState c g) = SoldierState (move d c) g
+runProcessM :: ProcessM a -> Game -> (a,[Grenade])
+runProcessM x g = evalRWS x g ()
 
-processSoldier :: SoldierState -> Command -> ProcessM SoldierState
-processSoldier st c = do hasG <- throw st c
-                         let moved = moveSoldier c st
-                         return moved {hasGrenade = hasG}
 
-throw :: SoldierState -> Command -> ProcessM Bool
-throw st c = case throwsGrenade c
-             of Nothing -> return (hasGrenade st)
+validCoordinate :: Game -> Coord -> Bool
+validCoordinate g (x,y) = x >= 0 && y >= 0 && x < w && y < h
+  where (w,h) = size . board $ g
+
+moveSoldier :: Command -> SoldierState -> ProcessM SoldierState
+moveSoldier (Command d t) (SoldierState c g) = 
+  do game <- ask
+     let to = move d c
+         ok = validCoordinate game to
+     return $ SoldierState (if ok then to else c) g
+
+throw :: Command -> SoldierState -> ProcessM SoldierState
+throw c st = case throwsGrenade c
+             of Nothing -> return st
                 Just coord
-                  | canThrow st coord -> tell [Grenade coord 2] >> return False
-                  | otherwise -> return (hasGrenade st)
+                  | canThrow st coord -> tell [Grenade coord 2]
+                                         >> return st {hasGrenade = False}
+                  | otherwise -> return st
 
 canThrow :: SoldierState -> Coord -> Bool
 canThrow s c = hasGrenade s
                && manhattan (soldierCoord s) c <= 10
                && hasGrenade s
 
+processSoldier :: Command -> SoldierState -> ProcessM SoldierState
+processSoldier c = throw c >=> moveSoldier c
+
+
 processSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> ProcessM (M.Map Name SoldierState)
 processSoldiers ss cs = foldM f ss $ M.assocs cs
   where f :: M.Map Name SoldierState -> (Name,Command) -> ProcessM (M.Map Name SoldierState)
         f ss (name,command) = case (M.lookup name ss)
                               of Nothing -> return ss
-                                 (Just s) -> do s' <- processSoldier s command
+                                 (Just s) -> do s' <- processSoldier command s
                                                 return $ M.insert name s' ss
                              
-processCommands :: M.Map Name SoldierState -> M.Map Name Command -> (M.Map Name SoldierState, [Grenade])
-processCommands soldiers commands = runWriter $ processSoldiers soldiers commands
+processCommands :: Game -> M.Map Name SoldierState -> M.Map Name Command -> (M.Map Name SoldierState, [Grenade])
+processCommands g soldiers commands =
+  runProcessM (processSoldiers soldiers commands) g
 
 processGrenades :: [Grenade] -> ([Grenade],[Explosion])
 processGrenades gs = (remaining,explosions)
@@ -90,13 +103,14 @@ type Explosion = Coord
 kills :: Explosion -> SoldierState -> Bool
 kills (a,b) (SoldierState (c,d) _) = abs (a-c) <= 1 && abs (b-d) <= 1
 
-updateTeam :: Team
+updateTeam :: Game
+              -> Team
               -> [Explosion] 
               -> M.Map Name Command
               -> (Team, [Grenade])
-updateTeam (Team solds) explosions commands = (Team new, gs)
+updateTeam g (Team solds) explosions commands = (Team new, gs)
   where surviving = M.filter (\s -> not $ any (flip kills s) explosions) solds
-        (new,gs) = processCommands surviving commands
+        (new,gs) = processCommands g surviving commands
 
 data Board = Board {size :: (Int,Int)}
              deriving Show
@@ -105,10 +119,10 @@ data Game = Game {board :: Board, ateam :: Team, bteam :: Team, grenades :: [Gre
             deriving Show
 
 updateGame :: Game -> M.Map Name Command -> M.Map Name Command -> Game
-updateGame (Game b at bt gs) acommand bcommand = Game b at' bt' gs'
+updateGame g@(Game b at bt gs) acommand bcommand = Game b at' bt' gs'
   where (gremaining,explosions) = processGrenades gs
-        (at',ga) = updateTeam at explosions acommand
-        (bt',gb) = updateTeam bt explosions bcommand
+        (at',ga) = updateTeam g at explosions acommand
+        (bt',gb) = updateTeam g bt explosions bcommand
         gs' = gremaining ++ ga ++ gb
         
 
