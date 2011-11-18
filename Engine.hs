@@ -45,9 +45,8 @@ data Command = Command {commandDirection :: Dir,
 
 type ProcessM = RWS Game [Grenade] ()
 
-runProcessM :: ProcessM a -> Game -> (a,[Grenade])
-runProcessM x g = evalRWS x g ()
-
+runProcessM :: Game -> ProcessM a -> (a,[Grenade])
+runProcessM g x = evalRWS x g ()
 
 validCoordinate :: Game -> Coord -> Bool
 validCoordinate g (x,y) = x >= 0 && y >= 0 && x < w && y < h
@@ -76,18 +75,13 @@ canThrow s c = hasGrenade s
 processSoldier :: Command -> SoldierState -> ProcessM SoldierState
 processSoldier c = throw c >=> moveSoldier c
 
-
 processSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> ProcessM (M.Map Name SoldierState)
 processSoldiers ss cs = foldM f ss $ M.assocs cs
   where f :: M.Map Name SoldierState -> (Name,Command) -> ProcessM (M.Map Name SoldierState)
-        f ss (name,command) = case (M.lookup name ss)
-                              of Nothing -> return ss
-                                 (Just s) -> do s' <- processSoldier command s
-                                                return $ M.insert name s' ss
-                             
-processCommands :: Game -> M.Map Name SoldierState -> M.Map Name Command -> (M.Map Name SoldierState, [Grenade])
-processCommands g soldiers commands =
-  runProcessM (processSoldiers soldiers commands) g
+        f ss (name,command) =
+          case (M.lookup name ss)
+          of Nothing -> return ss
+             (Just s) -> M.insert name <$> processSoldier command s <*> pure s
 
 processGrenades :: [Grenade] -> ([Grenade],[Explosion])
 processGrenades gs = (remaining,explosions)
@@ -103,14 +97,13 @@ type Explosion = Coord
 kills :: Explosion -> SoldierState -> Bool
 kills (a,b) (SoldierState (c,d) _) = abs (a-c) <= 1 && abs (b-d) <= 1
 
-updateTeam :: Game
-              -> Team
+updateTeam :: Team
               -> [Explosion] 
               -> M.Map Name Command
-              -> (Team, [Grenade])
-updateTeam g (Team solds) explosions commands = (Team new, gs)
+              -> ProcessM Team
+updateTeam (Team solds) explosions commands =
+  Team <$> processSoldiers surviving commands
   where surviving = M.filter (\s -> not $ any (flip kills s) explosions) solds
-        (new,gs) = processCommands g surviving commands
 
 data Board = Board {size :: (Int,Int)}
              deriving Show
@@ -121,10 +114,11 @@ data Game = Game {board :: Board, ateam :: Team, bteam :: Team, grenades :: [Gre
 updateGame :: Game -> M.Map Name Command -> M.Map Name Command -> Game
 updateGame g@(Game b at bt gs) acommand bcommand = Game b at' bt' gs'
   where (gremaining,explosions) = processGrenades gs
-        (at',ga) = updateTeam g at explosions acommand
-        (bt',gb) = updateTeam g bt explosions bcommand
-        gs' = gremaining ++ ga ++ gb
-        
+        ((at',bt'),gs') = runProcessM g
+                          $ tell gremaining >>
+                            (,)
+                            <$> updateTeam at explosions acommand
+                            <*> updateTeam bt explosions bcommand
 
 {-
 -- WIP
