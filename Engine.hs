@@ -75,13 +75,16 @@ canThrow s c = hasGrenade s
 processSoldier :: Command -> SoldierState -> ProcessM SoldierState
 processSoldier c = throw c >=> moveSoldier c
 
-processSoldiers :: M.Map Name SoldierState -> M.Map Name Command -> ProcessM (M.Map Name SoldierState)
-processSoldiers ss cs = foldM f ss $ M.assocs cs
+processSoldiers :: M.Map Name Command
+                   -> M.Map Name SoldierState
+                   -> ProcessM (M.Map Name SoldierState)
+processSoldiers cs ss = foldM f ss $ M.assocs cs
   where f :: M.Map Name SoldierState -> (Name,Command) -> ProcessM (M.Map Name SoldierState)
         f ss (name,command) =
-          case (M.lookup name ss)
-          of Nothing -> return ss
-             (Just s) -> M.insert name <$> processSoldier command s <*> pure s
+          case M.lookup name ss
+          of Nothing  -> return ss
+             (Just s) -> do s' <- processSoldier command s
+                            return $ M.insert name s' ss
 
 processGrenades :: [Grenade] -> ([Grenade],[Explosion])
 processGrenades gs = (remaining,explosions)
@@ -91,24 +94,34 @@ processGrenades gs = (remaining,explosions)
 
 data Team = Team {soldiers :: M.Map Name SoldierState}
             deriving Show
-
+                     
 type Explosion = Coord
 
-kills :: Explosion -> SoldierState -> Bool
-kills (a,b) (SoldierState (c,d) _) = abs (a-c) <= 1 && abs (b-d) <= 1
+kills :: SoldierState -> Explosion -> Bool
+kills (SoldierState (c,d) _) (a,b) = abs (a-c) <= 1 && abs (b-d) <= 1
+
+processExplosions :: [Explosion]
+                     -> M.Map Name SoldierState -> M.Map Name SoldierState
+processExplosions explosions solds =
+  M.filter (\s -> not $ any (kills s) explosions) solds
 
 updateTeam :: Team
               -> [Explosion] 
               -> M.Map Name Command
               -> ProcessM Team
 updateTeam (Team solds) explosions commands =
-  Team <$> processSoldiers surviving commands
-  where surviving = M.filter (\s -> not $ any (flip kills s) explosions) solds
+  liftM Team
+  . processSoldiers commands
+  . processExplosions explosions
+  $ solds
 
 data Board = Board {size :: (Int,Int)}
              deriving Show
 
-data Game = Game {board :: Board, ateam :: Team, bteam :: Team, grenades :: [Grenade]}
+data Game = Game {board :: Board,
+                  ateam :: Team,
+                  bteam :: Team,
+                  grenades :: [Grenade]}
             deriving Show
 
 updateGame :: Game -> M.Map Name Command -> M.Map Name Command -> Game
@@ -155,4 +168,3 @@ drawGame g = intercalate "\n" $ map (intercalate " " . map d) coords
         coords = map (\x -> map ((,)x) [0..h-1]) [0..w-1]
         drawn = drawGame' g
         d c = M.findWithDefault "." c drawn
-        
