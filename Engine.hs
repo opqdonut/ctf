@@ -7,10 +7,12 @@ import Data.List
 import Data.Array
 import Data.Maybe
 import Control.Monad.RWS
+import Control.Monad.Writer
 
 type Coord = (Int,Int)
 
-data SoldierState = SoldierState {soldierCoord :: Coord,
+data SoldierState = SoldierState {soldierName :: Name,
+                                  soldierCoord :: Coord,
                                   hasGrenade :: Bool}
                   deriving Show
                     
@@ -39,7 +41,8 @@ type Name = String
 data Grenade = Grenade {grenadeCoord :: Coord, countdown :: Int}
                deriving Show
 
-data Command = Command {commandDirection :: Dir,
+data Command = Command {commandName :: Name,
+                        commandDirection :: Dir,
                         throwsGrenade :: Maybe Coord}
                deriving Show
 
@@ -53,14 +56,16 @@ validCoordinate (x,y) g = x >= 0 && y >= 0 && x < w && y < h
   where (w,h) = size . board $ g
 
 moveSoldier :: Command -> SoldierState -> ProcessM SoldierState
-moveSoldier (Command d t) (SoldierState c g) = 
-  do let to = move d c
+moveSoldier (Command _ d t) ss = 
+  do let to = move d (soldierCoord ss)
      ok <- asks $ validCoordinate to
-     return $ SoldierState (if ok then to else c) g
+     return $ if ok
+              then ss {soldierCoord = to}
+              else ss
 
 throw :: Command -> SoldierState -> ProcessM SoldierState
-throw (Command _ Nothing) st = return st
-throw (Command _ (Just coord)) st =
+throw (Command _ _ Nothing) st = return st
+throw (Command _ _ (Just coord)) st =
   do cOk <- asks $ validCoordinate coord
      let tOk = canThrow st coord
      if (cOk && tOk)
@@ -75,12 +80,13 @@ canThrow s c = hasGrenade s
 processSoldier :: Command -> SoldierState -> ProcessM SoldierState
 processSoldier c = throw c >=> moveSoldier c
 
-processSoldiers :: M.Map Name Command
+processCommands :: [Command]
                    -> M.Map Name SoldierState
                    -> ProcessM (M.Map Name SoldierState)
-processSoldiers cs ss = foldM f ss $ M.assocs cs
-  where f :: M.Map Name SoldierState -> (Name,Command) -> ProcessM (M.Map Name SoldierState)
-        f ss (name,command) =
+processCommands cs ss = foldM f ss $ cs
+  where f :: M.Map Name SoldierState -> Command -> ProcessM (M.Map Name SoldierState)
+        f ss command =
+          let name = commandName command in
           case M.lookup name ss
           of Nothing  -> return ss
              (Just s) -> do s' <- processSoldier command s
@@ -98,7 +104,8 @@ data Team = Team {soldiers :: M.Map Name SoldierState}
 type Explosion = Coord
 
 kills :: SoldierState -> Explosion -> Bool
-kills (SoldierState (c,d) _) (a,b) = abs (a-c) <= 1 && abs (b-d) <= 1
+kills s (a,b) = abs (a-c) <= 1 && abs (b-d) <= 1
+  where (c,d) = soldierCoord s
 
 processExplosions :: [Explosion]
                      -> M.Map Name SoldierState -> M.Map Name SoldierState
@@ -107,11 +114,11 @@ processExplosions explosions solds =
 
 updateTeam :: Team
               -> [Explosion] 
-              -> M.Map Name Command
+              -> [Command]
               -> ProcessM Team
 updateTeam (Team solds) explosions commands =
   liftM Team
-  . processSoldiers commands
+  . processCommands commands
   . processExplosions explosions
   $ solds
 
@@ -124,7 +131,7 @@ data Game = Game {board :: Board,
                   grenades :: [Grenade]}
             deriving Show
 
-updateGame :: Game -> M.Map Name Command -> M.Map Name Command -> Game
+updateGame :: Game -> [Command] -> [Command] -> Game
 updateGame g@(Game b at bt gs) acommand bcommand = Game b at' bt' gs'
   where (gremaining,explosions) = processGrenades gs
         ((at',bt'),gs') = runProcessM g
@@ -133,7 +140,7 @@ updateGame g@(Game b at bt gs) acommand bcommand = Game b at' bt' gs'
                             <$> updateTeam at explosions acommand
                             <*> updateTeam bt explosions bcommand
 
-runGame :: Game -> [(M.Map Name Command, M.Map Name Command)] -> [Game]
+runGame :: Game -> [([Command], [Command])] -> [Game]
 runGame = scanl upd 
   where upd g (ca,cb) = updateGame g ca cb
         
@@ -151,3 +158,4 @@ drawGame g = intercalate "\n" $ map (intercalate " " . map d) coords
         coords = map (\x -> map ((,)x) [0..h-1]) [0..w-1]
         drawn = drawGame' g
         d c = M.findWithDefault "." c drawn
+
