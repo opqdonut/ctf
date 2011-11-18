@@ -133,23 +133,6 @@ updateGame g@(Game b at bt gs) acommand bcommand = Game b at' bt' gs'
                             <$> updateTeam at explosions acommand
                             <*> updateTeam bt explosions bcommand
 
-{-
--- WIP
-
-applyExplosion :: Explosion -> Team -> Team
-applyExplosion expl t = t { soldiers = surviving }
-  where surviving = M.filter (\s -> not $ kills expl s) $ soldiers t
-        
-data Event = EExplode Explosion | EGrenade Grenade | ECommand Name Command
-
-apply :: Game -> Event -> Game
-apply (EExplode e) game = game {ateam = applyExplosion e $ ateam g,
-                                bteam = applyExplosion e $ bteam g}
-apply (EGrenade g) game = game {grenades = g:grenades}
-apply (ECommand c) game = undefined
-                                  
--}
-
 runGame :: Game -> [(M.Map Name Command, M.Map Name Command)] -> [Game]
 runGame = scanl upd 
   where upd g (ca,cb) = updateGame g ca cb
