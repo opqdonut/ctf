@@ -92,7 +92,7 @@ kills (a,b) (SoldierState (c,d) _) = abs (a-c) <= 1 && abs (b-d) <= 1
 
 updateTeam :: Team
               -> [Explosion] 
-              -> M.Map Name Command -- ^ commands
+              -> M.Map Name Command
               -> (Team, [Grenade])
 updateTeam (Team solds) explosions commands = (Team new, gs)
   where surviving = M.filter (\s -> not $ any (flip kills s) explosions) solds
@@ -111,6 +111,24 @@ updateGame (Game b at bt gs) acommand bcommand = Game b at' bt' gs'
         (bt',gb) = updateTeam bt explosions bcommand
         gs' = gremaining ++ ga ++ gb
         
+
+{-
+-- WIP
+
+applyExplosion :: Explosion -> Team -> Team
+applyExplosion expl t = t { soldiers = surviving }
+  where surviving = M.filter (\s -> not $ kills expl s) $ soldiers t
+        
+data Event = EExplode Explosion | EGrenade Grenade | ECommand Name Command
+
+apply :: Game -> Event -> Game
+apply (EExplode e) game = game {ateam = applyExplosion e $ ateam g,
+                                bteam = applyExplosion e $ bteam g}
+apply (EGrenade g) game = game {grenades = g:grenades}
+apply (ECommand c) game = undefined
+                                  
+-}
+
 runGame :: Game -> [(M.Map Name Command, M.Map Name Command)] -> [Game]
 runGame = scanl upd 
   where upd g (ca,cb) = updateGame g ca cb
