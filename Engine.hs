@@ -15,9 +15,11 @@ data SoldierState = SoldierState {soldierName :: Name,
                                   soldierCoord :: Coord,
                                   hasGrenade :: Bool}
                   deriving Show
-                    
+
+type Soldiers = M.Map Name SoldierState
+                           
 data Dir = S | D | U | L | R
-         deriving Show
+         deriving (Show,Read,Eq)
 
 type Trans = (Int,Int)
 
@@ -44,7 +46,7 @@ data Grenade = Grenade {grenadeCoord :: Coord, countdown :: Int}
 data Command = Command {commandName :: Name,
                         commandDirection :: Dir,
                         throwsGrenade :: Maybe Coord}
-               deriving Show
+               deriving (Show,Eq)
 
 type ProcessM = RWS Game [Grenade] ()
 
@@ -81,10 +83,10 @@ processSoldier :: Command -> SoldierState -> ProcessM SoldierState
 processSoldier c = throw c >=> moveSoldier c
 
 processCommands :: [Command]
-                   -> M.Map Name SoldierState
-                   -> ProcessM (M.Map Name SoldierState)
+                   -> Soldiers
+                   -> ProcessM Soldiers
 processCommands cs ss = foldM f ss $ cs
-  where f :: M.Map Name SoldierState -> Command -> ProcessM (M.Map Name SoldierState)
+  where f :: Soldiers -> Command -> ProcessM Soldiers
         f ss command =
           let name = commandName command in
           case M.lookup name ss
@@ -98,9 +100,6 @@ processGrenades gs = (remaining,explosions)
         (exploded,remaining) = partition ((==0).countdown) news
         explosions = map grenadeCoord exploded
 
-data Team = Team {soldiers :: M.Map Name SoldierState}
-            deriving Show
-                     
 type Explosion = Coord
 
 kills :: SoldierState -> Explosion -> Bool
@@ -108,48 +107,45 @@ kills s (a,b) = abs (a-c) <= 1 && abs (b-d) <= 1
   where (c,d) = soldierCoord s
 
 processExplosions :: [Explosion]
-                     -> M.Map Name SoldierState -> M.Map Name SoldierState
+                     -> Soldiers -> Soldiers
 processExplosions explosions solds =
   M.filter (\s -> not $ any (kills s) explosions) solds
 
-updateTeam :: Team
-              -> [Explosion] 
-              -> [Command]
-              -> ProcessM Team
-updateTeam (Team solds) explosions commands =
-  liftM Team
-  . processCommands commands
+updateSoldiers :: [Explosion] 
+                  -> [Command]
+                  -> Soldiers
+                  -> ProcessM Soldiers
+updateSoldiers explosions commands =
+  processCommands commands
   . processExplosions explosions
-  $ solds
 
 data Board = Board {size :: (Int,Int)}
              deriving Show
 
 data Game = Game {board :: Board,
-                  ateam :: Team,
-                  bteam :: Team,
+                  soldiers :: Soldiers,
                   grenades :: [Grenade]}
             deriving Show
 
-updateGame :: Game -> [Command] -> [Command] -> Game
-updateGame g@(Game b at bt gs) acommand bcommand = Game b at' bt' gs'
+updateGame :: Game -> [Command] -> Game
+updateGame g@(Game b ss gs) commands = Game b ss' gs'
   where (gremaining,explosions) = processGrenades gs
-        ((at',bt'),gs') = runProcessM g
+        (ss',gs') = runProcessM g
                           $ tell gremaining >>
-                            (,)
-                            <$> updateTeam at explosions acommand
-                            <*> updateTeam bt explosions bcommand
+                            updateSoldiers explosions commands ss
 
+{-
 runGame :: Game -> [([Command], [Command])] -> [Game]
 runGame = scanl upd 
   where upd g (ca,cb) = updateGame g ca cb
+-}
         
 drawGame' :: Game -> M.Map Coord String
-drawGame' g = M.unionsWith (\x y -> x ++ "," ++ y) $ map M.fromList [gs,ta,tb]
-  where gs = map drawGrenade $ grenades g
+drawGame' g = M.fromListWith comb (gs++tss)
+  where comb x y = x ++ "," ++ y
+        gs = map drawGrenade $ grenades g
         drawGrenade (Grenade c t) = (c,show t)
-        ta = map drawSoldier . M.assocs . soldiers $ ateam g
-        tb = map drawSoldier . M.assocs . soldiers $ bteam g
+        tss = map drawSoldier . M.assocs . soldiers $ g
         drawSoldier (name,s) = (soldierCoord s,name)
         
 drawGame :: Game -> String
