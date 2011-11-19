@@ -68,16 +68,17 @@ moveSoldier (Command _ d t) ss =
 throw :: Command -> SoldierState -> ProcessM SoldierState
 throw (Command _ _ Nothing) st = return st
 throw (Command _ _ (Just coord)) st =
-  do cOk <- asks $ validCoordinate coord
-     let tOk = canThrow st coord
-     if (cOk && tOk)
+  do ok <- canThrow st coord
+     if ok
        then tell [Grenade coord 2] >> return st {hasGrenade = False}
        else return st
 
-canThrow :: SoldierState -> Coord -> Bool
-canThrow s c = hasGrenade s
-               && manhattan (soldierCoord s) c <= 10
-               && hasGrenade s
+canThrow :: SoldierState -> Coord -> ProcessM Bool
+canThrow s c = do valid <- asks $ validCoordinate c
+                  return $
+                    valid 
+                    && hasGrenade s
+                    && manhattan (soldierCoord s) c <= 10
 
 processSoldier :: Command -> SoldierState -> ProcessM SoldierState
 processSoldier c = throw c >=> moveSoldier c
