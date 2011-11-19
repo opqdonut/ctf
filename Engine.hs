@@ -11,7 +11,11 @@ import Control.Monad.Writer
 
 type Coord = (Int,Int)
 
+data Team = A | B
+          deriving (Show, Eq)
+
 data SoldierState = SoldierState {soldierName :: Name,
+                                  soldierTeam :: Team,
                                   soldierCoord :: Coord,
                                   hasGrenade :: Bool}
                   deriving Show
@@ -86,9 +90,9 @@ processSoldier c = throw c >=> moveSoldier c
 processCommands :: [Command]
                    -> Soldiers
                    -> ProcessM Soldiers
-processCommands cs ss = foldM f ss $ cs
-  where f :: Soldiers -> Command -> ProcessM Soldiers
-        f ss command =
+processCommands cs ss = foldM f ss $ cs 
+ where f :: Soldiers -> Command -> ProcessM Soldiers
+       f ss command =
           let name = commandName command in
           case M.lookup name ss
           of Nothing  -> return ss
@@ -108,9 +112,15 @@ kills s (a,b) = abs (a-c) <= 1 && abs (b-d) <= 1
   where (c,d) = soldierCoord s
 
 processExplosions :: [Explosion]
-                     -> Soldiers -> Soldiers
-processExplosions explosions solds =
-  M.filter (\s -> not $ any (kills s) explosions) solds
+                     -> Soldiers -> ProcessM Soldiers
+processExplosions explosions solds = M.fromList <$> mapM f (M.assocs solds)
+  where f (n,s)
+          | any (kills s) explosions =
+            do r <- asks $ respawn.board
+               return $
+                 (n,s {hasGrenade = True,
+                       soldierCoord = r (soldierTeam s)})
+          | otherwise = return (n,s)
 
 updateSoldiers :: [Explosion] 
                   -> [Command]
@@ -118,15 +128,16 @@ updateSoldiers :: [Explosion]
                   -> ProcessM Soldiers
 updateSoldiers explosions commands =
   processCommands commands
-  . processExplosions explosions
+  <=< processExplosions explosions
 
-data Board = Board {size :: (Int,Int)}
-             deriving Show
+data Board = Board {size :: (Int,Int),
+                    respawn :: Team -> Coord}
+           --deriving Show
 
 data Game = Game {board :: Board,
                   soldiers :: Soldiers,
                   grenades :: [Grenade]}
-            deriving Show
+          --deriving Show
 
 updateGame :: Game -> [Command] -> Game
 updateGame g@(Game b ss gs) commands = Game b ss' gs'

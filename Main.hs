@@ -8,13 +8,15 @@ import qualified Data.Map as M
 
 -- -- -- -- -- -- -- -- -- -- --
 
-sampleGame = Game (Board (11,11)) (M.union ta tb) []
-  where ta = M.fromList [("A", SoldierState "A" (0,0) True),
-                         ("B", SoldierState "B" (0,1) True),
-                         ("C", SoldierState "C" (0,2) True)]
-        tb = M.fromList [("D", SoldierState "D" (10,0) True),
-                         ("E", SoldierState "E" (10,1) True),
-                         ("F", SoldierState "F" (10,2) True)]
+sampleGame = Game (Board (11,11) respawn) (M.union ta tb) []
+  where ta = M.fromList [("A", SoldierState "A" A (0,0) True),
+                         ("B", SoldierState "B" A (0,1) True),
+                         ("C", SoldierState "C" A (0,2) True)]
+        tb = M.fromList [("D", SoldierState "D" B (10,0) True),
+                         ("E", SoldierState "E" B (10,1) True),
+                         ("F", SoldierState "F" B (10,2) True)]
+        respawn A = (0,0)
+        respawn B = (10,0)
              
 sampleACommands g = [Command "A" R Nothing,
                      Command "B" R Nothing,

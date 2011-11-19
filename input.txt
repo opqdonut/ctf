@@ -19,8 +19,8 @@ D S
 E L
 F L
 
-A R
-B R
+A R 
+B R (6,1)
 C R
 D S (5,5)
 E U
@@ -32,4 +32,11 @@ C R
 D S
 E U
 F R
+
+A S
+B S
+C S
+D S
+E S
+F S
 
