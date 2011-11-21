@@ -1,0 +1,32 @@
+Turn-based capture the flag game for University of Helsinki AI Challenge course
+
+Usage
+=====
+
+$ cabal configure
+$ cabal build
+$ ./dist/build/ctf/ctf < input.txt
+
+Example input.txt included.
+
+Input format
+============
+
+Description TODO, see input.txt.
+
+Output format
+=============
+
+Description TODO, see output.
+
+TODO
+====
+
+- flags
+- obstacles
+- stdin/stdout communication with logics
+- scoring
+- read map from file
+
+
+
