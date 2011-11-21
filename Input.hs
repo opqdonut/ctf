@@ -7,11 +7,12 @@ import Data.List
 import Control.Applicative
 
 readCmd :: String -> Command
-readCmd s =
-  let name:sdir:scoord = words s
+readCmd str =
+  let name:sdir:scoord = words str
       dir = read sdir
       coord = case scoord of [] -> Nothing
                              [s] -> Just (read s)
+                             _ -> error "malformed command!"
   in Command name dir coord
      
 verifyCmds :: [Command] -> Bool

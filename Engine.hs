@@ -2,12 +2,8 @@ module Engine where
 
 import qualified Data.Map as M
 import Control.Monad
-import Control.Applicative
 import Data.List
-import Data.Array
-import Data.Maybe
 import Control.Monad.RWS
-import Control.Monad.Writer
 
 type Coord = (Int,Int)
 
@@ -55,6 +51,7 @@ trans D = (0,1)
 trans L = (-1,0)
 trans R = (1,0)
 
+manhattan :: Coord -> Coord -> Int
 manhattan (a,b) (c,d) = abs (a-c) + abs (b-d)
                
 (<+>) :: Coord -> Trans -> Coord
@@ -81,7 +78,10 @@ data Event = EvGrenade Grenade | EvExplosion Explosion | EvRespawn Respawn
                     
 type EventM = RWS () [Event] Game
 
+runEventM :: EventM () -> Game -> (Game,[Event])
 runEventM f g = execRWS f () g
+
+pend :: Event -> EventM ()
 pend = tell . (:[])
 
 -- Commands
@@ -91,8 +91,8 @@ validCoordinate (x,y) g = x >= 0 && y >= 0 && x < w && y < h
   where (w,h) = size . board $ g
 
 moveSoldier :: Command -> SoldierState -> EventM SoldierState
-moveSoldier (Command _ d t) ss = 
-  do let to = move d (soldierCoord ss)
+moveSoldier c ss = 
+  do let to = move (commandDirection c) (soldierCoord ss)
      ok <- gets $ validCoordinate to
      return $ if soldierAlive ss && ok
               then ss {soldierCoord = to}
@@ -140,6 +140,7 @@ reviveSoldier s
 processEvents :: EventM ()
 processEvents = mapM_ processEvent =<< gets pendingEvents 
 
+processEvent :: Event -> EventM ()
 processEvent (EvGrenade g)
   | countdown g == 1  = pend . EvExplosion . Explosion $ grenadeCoord g
   | otherwise         = pend $ EvGrenade g {countdown = countdown g - 1} 
@@ -170,18 +171,20 @@ grenades :: [Event] -> [Grenade]
 grenades = concatMap f
   where f e = case e of EvGrenade g -> [g]
                         _ -> []
+
+explosions :: [Event] -> [Explosion]       
 explosions = concatMap f
-  where f e = case e of EvExplosion e -> [e]
+  where f e = case e of EvExplosion ex -> [ex]
                         _ -> []
         
 drawGame' :: Game -> M.Map Coord String
-drawGame' g = M.fromListWith comb (gs++tss++es)
+drawGame' game = M.fromListWith comb (gs++tss++es)
   where comb x y = x ++ "," ++ y
-        gs = map drawGrenade . grenades . pendingEvents $ g
+        gs = map drawGrenade . grenades . pendingEvents $ game
         drawGrenade g = (grenadeCoord g,show $ countdown g)
-        es = map drawExplosion . explosions . pendingEvents $ g
+        es = map drawExplosion . explosions . pendingEvents $ game
         drawExplosion (Explosion c) = (c,"#")
-        tss = map drawSoldier . M.assocs . soldiers $ g
+        tss = map drawSoldier . M.assocs . soldiers $ game
         drawSoldier (name,s) = (soldierCoord s,if soldierAlive s then name else "_")
         
 drawGame :: Game -> String
