@@ -31,6 +31,8 @@ printGame x = putStrLn (drawGame x) >>
               putStrLn (gameInfo x A) >>
               putStrLn "B:" >>
               putStrLn (gameInfo x B) >>
+              putStrLn "pending:" >>
+              putStrLn (gamePending x) >>
               putStrLn "--" 
                   
 step game = liftM (updateGame game) readCmds
