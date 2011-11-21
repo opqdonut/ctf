@@ -78,71 +78,58 @@ data Explosion = Explosion Coord deriving Show
 
 data Event = EvGrenade Grenade | EvExplosion Explosion | EvRespawn Respawn
            deriving Show
-
-type ProcessM = RWS Game [Event] ()
-
-runProcessM :: Game -> ProcessM a -> (a,[Event])
-runProcessM g x = evalRWS x g ()
-
-validCoordinate :: Coord -> Game -> Bool
-validCoordinate (x,y) g = x >= 0 && y >= 0 && x < w && y < h
-  where (w,h) = size . board $ g
-
-moveSoldier :: Command -> SoldierState -> ProcessM SoldierState
-moveSoldier (Command _ d t) ss = 
-  do let to = move d (soldierCoord ss)
-     ok <- asks $ validCoordinate to
-     return $ if soldierAlive ss && ok
-              then ss {soldierCoord = to}
-              else ss
-
-throw :: Command -> SoldierState -> ProcessM SoldierState
-throw (Command _ _ Nothing) st = return st
-throw (Command _ _ (Just coord)) st =
-  do ok <- canThrow st coord
-     if ok
-       then tell [EvGrenade $ Grenade coord (soldierTeam st) 2]
-            >> return st {hasGrenade = False}
-       else return st
-
-canThrow :: SoldierState -> Coord -> ProcessM Bool
-canThrow s c = do valid <- asks $ validCoordinate c
-                  return $
-                    valid 
-                    && hasGrenade s
-                    && manhattan (soldierCoord s) c <= 10
                     
-processSoldier :: Command -> SoldierState -> ProcessM SoldierState
-processSoldier c = throw c >=> moveSoldier c
-
-processCommands :: [Command]
-                   -> Soldiers
-                   -> ProcessM Soldiers
-processCommands cs ss = foldM f ss $ cs 
- where f :: Soldiers -> Command -> ProcessM Soldiers
-       f ss command = mapMNamedSoldier (processSoldier command) (commandName command) ss
-
-
-kills :: SoldierState -> Explosion -> Bool
-kills s (Explosion (a,b)) = abs (a-c) <= 1 && abs (b-d) <= 1
-  where (c,d) = soldierCoord s
-
-updateSoldiers :: [Command]
-                  -> Soldiers
-                  -> ProcessM Soldiers
-updateSoldiers commands =
-  processCommands commands
-  
 type EventM = RWS () [Event] Game
 
 runEventM f g = execRWS f () g
 pend = tell . (:[])
 
-{-
-modifySoldiers :: (Soldiers -> Soldiers) -> EventM ()
-modifySoldiers f = modify g
-  where g game = g { soldiers = f (soldiers game) }
--}
+-- Commands
+
+validCoordinate :: Coord -> Game -> Bool
+validCoordinate (x,y) g = x >= 0 && y >= 0 && x < w && y < h
+  where (w,h) = size . board $ g
+
+moveSoldier :: Command -> SoldierState -> EventM SoldierState
+moveSoldier (Command _ d t) ss = 
+  do let to = move d (soldierCoord ss)
+     ok <- gets $ validCoordinate to
+     return $ if soldierAlive ss && ok
+              then ss {soldierCoord = to}
+              else ss
+
+throw :: Command -> SoldierState -> EventM SoldierState
+throw (Command _ _ Nothing) st = return st
+throw (Command _ _ (Just coord)) st =
+  do ok <- canThrow st coord
+     if ok
+       then do pend . EvGrenade $ Grenade coord (soldierTeam st) 2
+               return st {hasGrenade = False}
+       else return st
+
+canThrow :: SoldierState -> Coord -> EventM Bool
+canThrow s c = do valid <- gets $ validCoordinate c
+                  return $
+                    valid 
+                    && hasGrenade s
+                    && manhattan (soldierCoord s) c <= 10
+                    
+processSoldier :: Command -> SoldierState -> EventM SoldierState
+processSoldier c = throw c >=> moveSoldier c
+
+processCommand :: Command -> EventM ()
+processCommand c = do new <- gets soldiers >>= mapMNamedSoldier (processSoldier c) (commandName c)
+                      modify (\g -> g {soldiers = new})
+
+processCommands :: [Command]
+                   -> EventM ()
+processCommands cs = mapM_ processCommand cs
+
+-- events
+
+kills :: SoldierState -> Explosion -> Bool
+kills s (Explosion (a,b)) = abs (a-c) <= 1 && abs (b-d) <= 1
+  where (c,d) = soldierCoord s
 
 reviveSoldier :: SoldierState -> EventM SoldierState
 reviveSoldier s
@@ -164,21 +151,20 @@ processEvent (EvExplosion e) = do new <- gets soldiers >>= mapMSoldiers f
           | otherwise = return s
 processEvent (EvRespawn (Respawn n)) = do new <- gets soldiers >>= mapMNamedSoldier reviveSoldier n
                                           modify (\g -> g {soldiers = new})
+                                          
+-- bring it together
   
 data Board = Board {size :: (Int,Int),
                     respawn :: Team -> Coord}
-           --deriving Show
 
 data Game = Game {board :: Board,
                   soldiers :: Soldiers,
                   pendingEvents :: [Event]}
-          --deriving Show
 
 updateGame :: Game -> [Command] -> Game
-updateGame g commands = g' {soldiers = ss', pendingEvents = events' ++ events''}
-  where (g',events') = runEventM processEvents g
-        (ss',events'') = runProcessM g'
-                         $ updateSoldiers commands (soldiers g')
+updateGame g commands = g' {pendingEvents = events'}
+  where (g',events') = flip runEventM g $ do processEvents
+                                             processCommands commands
                          
 grenades :: [Event] -> [Grenade]
 grenades = concatMap f
