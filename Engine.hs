@@ -17,8 +17,12 @@ data Team = A | B
 data SoldierState = SoldierState {soldierName :: Name,
                                   soldierTeam :: Team,
                                   soldierCoord :: Coord,
-                                  hasGrenade :: Bool}
+                                  hasGrenade :: Bool,
+                                  soldierAlive :: Bool}
                   deriving Show
+                           
+mkSoldier :: Name -> Team -> Coord -> SoldierState
+mkSoldier n t c = SoldierState n t c True True
 
 type Soldiers = M.Map Name SoldierState
                            
@@ -44,7 +48,7 @@ move d c = c <+> trans d
 
 type Name = String
 
-data Grenade = Grenade {grenadeCoord :: Coord, countdown :: Int}
+data Grenade = Grenade {grenadeCoord :: Coord, grenadeTeam :: Team, countdown :: Int}
                deriving Show
 
 data Command = Command {commandName :: Name,
@@ -65,7 +69,7 @@ moveSoldier :: Command -> SoldierState -> ProcessM SoldierState
 moveSoldier (Command _ d t) ss = 
   do let to = move d (soldierCoord ss)
      ok <- asks $ validCoordinate to
-     return $ if ok
+     return $ if soldierAlive ss && ok
               then ss {soldierCoord = to}
               else ss
 
@@ -74,7 +78,8 @@ throw (Command _ _ Nothing) st = return st
 throw (Command _ _ (Just coord)) st =
   do ok <- canThrow st coord
      if ok
-       then tell [Grenade coord 2] >> return st {hasGrenade = False}
+       then tell [Grenade coord (soldierTeam st) 2]
+            >> return st {hasGrenade = False}
        else return st
 
 canThrow :: SoldierState -> Coord -> ProcessM Bool
@@ -83,9 +88,15 @@ canThrow s c = do valid <- asks $ validCoordinate c
                     valid 
                     && hasGrenade s
                     && manhattan (soldierCoord s) c <= 10
+                    
+reviveSoldier :: SoldierState -> ProcessM SoldierState
+reviveSoldier s
+  | not (soldierAlive s) = do r <- asks $ respawn.board
+                              return s { soldierAlive = True, soldierCoord = r (soldierTeam s) }
+  | otherwise = return s
 
 processSoldier :: Command -> SoldierState -> ProcessM SoldierState
-processSoldier c = throw c >=> moveSoldier c
+processSoldier c = reviveSoldier >=> throw c >=> moveSoldier c
 
 processCommands :: [Command]
                    -> Soldiers
@@ -115,11 +126,7 @@ processExplosions :: [Explosion]
                      -> Soldiers -> ProcessM Soldiers
 processExplosions explosions solds = M.fromList <$> mapM f (M.assocs solds)
   where f (n,s)
-          | any (kills s) explosions =
-            do r <- asks $ respawn.board
-               return $
-                 (n,s {hasGrenade = True,
-                       soldierCoord = r (soldierTeam s)})
+          | any (kills s) explosions = return (n,s {soldierAlive=False})
           | otherwise = return (n,s)
 
 updateSoldiers :: [Explosion] 
@@ -156,14 +163,18 @@ drawGame' :: Game -> M.Map Coord String
 drawGame' g = M.fromListWith comb (gs++tss)
   where comb x y = x ++ "," ++ y
         gs = map drawGrenade $ grenades g
-        drawGrenade (Grenade c t) = (c,show t)
+        drawGrenade g = (grenadeCoord g,show $ countdown g)
         tss = map drawSoldier . M.assocs . soldiers $ g
         drawSoldier (name,s) = (soldierCoord s,name)
         
 drawGame :: Game -> String
-drawGame g = intercalate "\n" $ map (intercalate " " . map d) coords
+drawGame g = unlines $ map (intercalate " " . map d) coords
   where (w,h) = size . board $ g
         coords = map (\x -> map ((,)x) [0..h-1]) [0..w-1]
         drawn = drawGame' g
         d c = M.findWithDefault "." c drawn
 
+gameInfo :: Game -> Team -> String
+gameInfo g t = unlines $ ss ++ gs
+  where ss = map show . filter ((==t).soldierTeam) . M.elems $ soldiers g
+        gs = map show . filter ((==t).grenadeTeam) $ grenades g
