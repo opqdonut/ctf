@@ -1,46 +1,58 @@
-A R
-B R
-C R
-D S
-E L
-F L
+A D
+B D
+C D
+
+A D
+
+A D
+
+A D
+
+A D
+
+A D
 
 A R
-B R
-C R (8,3)
-D S
-E L (5,5)
-F L
-
-A R (7,2)
-B R
-C R
-D S
-E L
-F L
-
-A R 
-B R (6,1)
-C R
-D S (5,5)
-E U
-F U
 
 A R
-B R
-C R
-D S
-E U
-F R
 
-A S
-B S
-C S
-D S
-E S
-F S
+A R
 
-A S
+A R
 
-A S
+A R
+
+A D
+
+A D
+
+A R
+
+A R
+
+A R
+
+A R
+
+A R
+
+A R
+
+A R
+
+A D
+
+A R
+
+A U
+F U (7,13)
+
+A U
+
+A U
+
+A U
+
+A U
+
 

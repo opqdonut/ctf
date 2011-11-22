@@ -22,7 +22,6 @@ Description TODO, see output.
 TODO
 ====
 
-- flags
 - stdin/stdout communication with logics
 - scoring
 - read map from file
