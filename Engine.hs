@@ -79,10 +79,8 @@ mapMSoldiers :: Monad m => (SoldierState -> m SoldierState) -> Soldiers -> m Sol
 mapMSoldiers f s = liftM toSoldiers $ mapM f (fromSoldiers s)
 
 mapMNamedSoldier :: Monad m => (SoldierState -> m SoldierState) -> Name -> Soldiers -> m Soldiers
-mapMNamedSoldier f name ss = case M.lookup name ss
-                          of Nothing  -> return ss
-                             (Just s) -> do s' <- f s
-                                            return $ M.insert name s' ss
+mapMNamedSoldier f name ss = do s' <- f (ss M.! name)
+                                return $ M.insert name s' ss
 
 type Name = String
 
