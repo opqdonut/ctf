@@ -40,6 +40,11 @@ data Team = A | B
 opposing A = B
 opposing B = A
 
+type Points = Array Team Int
+
+addPoints :: Team -> Int -> Points -> Points
+addPoints t i p = p // [(t,p!t + i)]
+
 data Flag = Flag {flagTeam :: Team, flagCoord :: Coord}
           deriving (Show)
 
@@ -107,6 +112,9 @@ pend = tell . (:[])
 
 -- | Command handling
 
+givePoints :: Team -> Int -> EventM ()
+givePoints t i = modify $ \g -> g {points = addPoints t i (points g)}
+
 moveSoldier :: Command -> SoldierState -> EventM SoldierState
 moveSoldier c ss = 
   do let to = move (commandDirection c) (soldierCoord ss)
@@ -120,8 +128,9 @@ putFlag f = modify $ \g -> g {flags = flags g // [(flagTeam f, f)]}
 
 maybePickUpFlag ss =
   do opposingFlag <- getFlag opponent
-     if flagCoord opposingFlag == soldierCoord ss
-       then return ss {holdsFlag = Just opponent}
+     if flagCoord opposingFlag == soldierCoord ss && isNothing (holdsFlag ss)
+       then givePoints (soldierTeam ss) 10
+            >> return ss {holdsFlag = Just opponent}
        else return ss
   where opponent = opposing (soldierTeam ss)
 
@@ -183,6 +192,7 @@ processEvent (EvExplosion e) = do new <- gets soldiers >>= mapMSoldiers f
                                   modify (\g -> g {soldiers = new})
   where f s
           | kills s e = do pend . EvRespawn . Respawn $ soldierName s
+                           givePoints (opposing $ soldierTeam s) 1
                            return s {soldierAlive=False}
           | otherwise = return s
 processEvent (EvRespawn (Respawn n)) = do new <- gets soldiers >>= mapMNamedSoldier reviveSoldier n
@@ -226,13 +236,15 @@ validCoordinate c b = ok && val /= Obstacle
 data Game = Game {board :: Board,
                   soldiers :: Soldiers,
                   flags :: Flags,
+                  points :: Points,
                   pendingEvents :: [Event]}
 
 mkGame :: Board -> [Name] -> [Name] -> Game
-mkGame b anames bnames = Game b s fs []
+mkGame b anames bnames = Game b s fs ps []
   where mks t n = mkSoldier n t (respawn b t)
         s = toSoldiers $ map (mks A) anames ++ map (mks B) bnames
         fs = toFlags $ [Flag A (base b A), Flag B (base b B)]
+        ps = array (A,B) [(A,0),(B,0)]
 
 updateGame :: Game -> [Command] -> Game
 updateGame g commands = g' {pendingEvents = events'}
@@ -273,8 +285,9 @@ drawGame g = unlines $ map (intercalate " " . map d) coords
         d c = M.findWithDefault (drawBoardCoord g c) c drawn
 
 gameInfo :: Game -> Team -> String
-gameInfo g t = unlines $ f: ss ++ gs
-  where f = show $ flags g ! t
+gameInfo g t = unlines $ p:f: ss ++ gs
+  where p = "Points "++show (points g ! t)
+        f = show $ flags g ! t
         ss = map show . filter ((==t).soldierTeam) . M.elems $ soldiers g
         gs = map show . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
         
