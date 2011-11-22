@@ -22,8 +22,8 @@ Description TODO, see output.
 TODO
 ====
 
+- flag logic (succesful stealing, respawning, etc.)
 - stdin/stdout communication with logics
-- scoring
 - read map from file
 
 
