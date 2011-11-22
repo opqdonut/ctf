@@ -18,10 +18,10 @@ type Trans = (Int,Int)
 
 trans :: Dir -> Trans
 trans S = (0,0)
-trans U = (0,-1)
-trans D = (0,1)
-trans L = (-1,0)
-trans R = (1,0)
+trans U = (-1,0)
+trans D = (1,0)
+trans L = (0,-1)
+trans R = (0,1)
 
 manhattan :: Coord -> Coord -> Int
 manhattan (a,b) (c,d) = abs (a-c) + abs (b-d)
@@ -35,19 +35,26 @@ move d c = c <+> trans d
 -- | Types
 
 data Team = A | B
-          deriving (Show, Eq)
+          deriving (Show, Eq, Ord)
+                   
+opposing A = B
+opposing B = A
 
 data Flag = Flag {flagTeam :: Team, flagCoord :: Coord}
           deriving (Show)
 
-type Flags = [Flag]
+type Flags = M.Map Team Flag
+
+fromFlags = M.elems
+toFlags = M.fromList . map f
+  where f flag = (flagTeam flag, flag)
 
 data SoldierState = SoldierState {soldierName :: Name,
                                   soldierTeam :: Team,
                                   soldierCoord :: Coord,
                                   hasGrenade :: Bool,
                                   soldierAlive :: Bool,
-                                  holdsFlag :: Maybe Flag}
+                                  holdsFlag :: Maybe Team}
                   deriving Show
                            
 mkSoldier :: Name -> Team -> Coord -> SoldierState
@@ -107,6 +114,23 @@ moveSoldier c ss =
      return $ if soldierAlive ss && ok
               then ss {soldierCoord = to}
               else ss
+                   
+getFlag t = gets $ fromJust . M.lookup t . flags
+putFlag f = modify $ \g -> g {flags = M.insert (flagTeam f) f (flags g)}
+
+maybePickUpFlag ss =
+  do opposingFlag <- getFlag opponent
+     if flagCoord opposingFlag == soldierCoord ss
+       then return ss {holdsFlag = Just opponent}
+       else return ss
+  where opponent = opposing (soldierTeam ss)
+
+maybeMoveFlag ss =
+  case holdsFlag ss of
+    Nothing -> return ss
+    Just t -> do f <- getFlag t
+                 putFlag f { flagCoord = soldierCoord ss }
+                 return ss
 
 throw :: Command -> SoldierState -> EventM SoldierState
 throw (Command _ _ Nothing) st = return st
@@ -125,7 +149,7 @@ canThrow s c = do valid <- gets $ validCoordinate c . board
                     && manhattan (soldierCoord s) c <= 10
                     
 processSoldier :: Command -> SoldierState -> EventM SoldierState
-processSoldier c = throw c >=> moveSoldier c
+processSoldier c = maybePickUpFlag >=> throw c >=> moveSoldier c >=> maybeMoveFlag
 
 processCommand :: Command -> EventM ()
 processCommand c = do new <- gets soldiers >>= mapMNamedSoldier (processSoldier c) (commandName c)
@@ -144,7 +168,8 @@ kills s (Explosion (a,b)) = abs (a-c) <= 1 && abs (b-d) <= 1
 reviveSoldier :: SoldierState -> EventM SoldierState
 reviveSoldier s
   | not (soldierAlive s) = do r <- gets $ respawn.board
-                              return s { soldierAlive = True, soldierCoord = r (soldierTeam s) }
+                              return s { soldierAlive = True, soldierCoord = r (soldierTeam s), 
+                                         hasGrenade = True, holdsFlag = Nothing }
   | otherwise = return s
 
 processEvents :: EventM ()
@@ -207,7 +232,7 @@ mkGame :: Board -> [Name] -> [Name] -> Game
 mkGame b anames bnames = Game b s fs []
   where mks t n = mkSoldier n t (respawn b t)
         s = toSoldiers $ map (mks A) anames ++ map (mks B) bnames
-        fs = [Flag A (base b A), Flag B (base b B)]
+        fs = toFlags $ [Flag A (base b A), Flag B (base b B)]
 
 updateGame :: Game -> [Command] -> Game
 updateGame g commands = g' {pendingEvents = events'}
@@ -233,7 +258,7 @@ drawGame' game = M.fromListWith comb (gs++tss++es++fs)
         drawExplosion (Explosion c) = (c,"X")
         tss = map drawSoldier . M.assocs . soldiers $ game
         drawSoldier (name,s) = (soldierCoord s,if soldierAlive s then name else "_")
-        fs = map drawFlag . flags $ game
+        fs = map drawFlag . fromFlags . flags $ game
         drawFlag (Flag t c) = (c,"?"++show t)
         
 drawBoardCoord :: Game -> Coord -> String
@@ -249,7 +274,7 @@ drawGame g = unlines $ map (intercalate " " . map d) coords
 
 gameInfo :: Game -> Team -> String
 gameInfo g t = unlines $ f: ss ++ gs
-  where f = show . fromJust  $ find ((==t).flagTeam) (flags g)
+  where f = show . fromJust  $ find ((==t).flagTeam) (fromFlags $ flags g)
         ss = map show . filter ((==t).soldierTeam) . M.elems $ soldiers g
         gs = map show . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
         
