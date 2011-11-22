@@ -4,19 +4,34 @@ import Engine
 import Input
 
 import Control.Monad
-import qualified Data.Map as M
+import Data.Array
 
 -- -- -- -- -- -- -- -- -- -- --
 
-sampleGame = Game (Board (11,11) respawnf) (M.union ta tb) []
-  where ta = M.fromList [("A", mkSoldier "A" A (0,0)),
-                         ("B", mkSoldier "B" A (0,1)),
-                         ("C", mkSoldier "C" A (0,2))]
-        tb = M.fromList [("D", mkSoldier "D" B (10,0)),
-                         ("E", mkSoldier "E" B (10,1)),
-                         ("F", mkSoldier "F" B (10,2))]
-        respawnf A = (0,0)
-        respawnf B = (10,0)
+sampleBoard = Board (listArray ((0,0),(14,14)) l) respawnf
+  where respawnf A = (0,0)
+        respawnf B = (14,14)
+        f x = case x of '#' -> Obstacle
+                        '.' -> Empty
+                        _ -> error "evo"
+        l = map f
+            "...............\
+            \...............\
+            \.........#.....\
+            \...###...#.....\
+            \...###...#.....\
+            \...#.....#.....\
+            \........###....\
+            \...............\
+            \..###..........\
+            \....#..........\
+            \....#....##....\
+            \....#..####....\
+            \.......####....\
+            \.......####....\
+            \..............."
+
+sampleGame = mkGame sampleBoard ["A","B","C"] ["D","E","F"]
              
 sampleACommands g = [Command "A" R Nothing,
                      Command "B" R Nothing,

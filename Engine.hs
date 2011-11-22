@@ -4,6 +4,7 @@ import qualified Data.Map as M
 import Control.Monad
 import Data.List
 import Control.Monad.RWS
+import Data.Array
 
 type Coord = (Int,Int)
 
@@ -86,14 +87,10 @@ pend = tell . (:[])
 
 -- Commands
 
-validCoordinate :: Coord -> Game -> Bool
-validCoordinate (x,y) g = x >= 0 && y >= 0 && x < w && y < h
-  where (w,h) = size . board $ g
-
 moveSoldier :: Command -> SoldierState -> EventM SoldierState
 moveSoldier c ss = 
   do let to = move (commandDirection c) (soldierCoord ss)
-     ok <- gets $ validCoordinate to
+     ok <- gets $ validCoordinate to . board
      return $ if soldierAlive ss && ok
               then ss {soldierCoord = to}
               else ss
@@ -108,7 +105,7 @@ throw (Command _ _ (Just coord)) st =
        else return st
 
 canThrow :: SoldierState -> Coord -> EventM Bool
-canThrow s c = do valid <- gets $ validCoordinate c
+canThrow s c = do valid <- gets $ validCoordinate c . board
                   return $
                     valid 
                     && hasGrenade s
@@ -153,14 +150,35 @@ processEvent (EvExplosion e) = do new <- gets soldiers >>= mapMSoldiers f
 processEvent (EvRespawn (Respawn n)) = do new <- gets soldiers >>= mapMNamedSoldier reviveSoldier n
                                           modify (\g -> g {soldiers = new})
                                           
--- bring it together
-  
-data Board = Board {size :: (Int,Int),
+-- board
+
+data Tile = Empty | Obstacle -- | FlagPlace Team
+          deriving (Show, Eq)
+
+drawTile Empty = "."
+drawTile Obstacle = "#"
+
+data Board = Board {boardContents :: Array Coord Tile,
                     respawn :: Team -> Coord}
+
+boardSize b = (w+1,h+1)
+  where (w,h) = snd . bounds . boardContents $ b
+
+validCoordinate :: Coord -> Board -> Bool
+validCoordinate c b = ok && val /= Obstacle
+  where ok = inRange (bounds . boardContents $ b) c
+        val = boardContents b ! c
+
+-- bring it together
 
 data Game = Game {board :: Board,
                   soldiers :: Soldiers,
                   pendingEvents :: [Event]}
+
+mkGame :: Board -> [Name] -> [Name] -> Game
+mkGame b anames bnames = Game b s []
+  where mks t n = mkSoldier n t (respawn b t)
+        s = toSoldiers $ map (mks A) anames ++ map (mks B) bnames
 
 updateGame :: Game -> [Command] -> Game
 updateGame g commands = g' {pendingEvents = events'}
@@ -183,16 +201,20 @@ drawGame' game = M.fromListWith comb (gs++tss++es)
         gs = map drawGrenade . grenades . pendingEvents $ game
         drawGrenade g = (grenadeCoord g,show $ countdown g)
         es = map drawExplosion . explosions . pendingEvents $ game
-        drawExplosion (Explosion c) = (c,"#")
+        drawExplosion (Explosion c) = (c,"X")
         tss = map drawSoldier . M.assocs . soldiers $ game
         drawSoldier (name,s) = (soldierCoord s,if soldierAlive s then name else "_")
         
+drawBoardCoord :: Game -> Coord -> String
+drawBoardCoord g c = drawTile . (!c) . boardContents . board $ g
+        
 drawGame :: Game -> String
 drawGame g = unlines $ map (intercalate " " . map d) coords
-  where (w,h) = size . board $ g
+  where (w,h) = boardSize . board $ g
+        coords :: [[Coord]]
         coords = map (\x -> map ((,)x) [0..h-1]) [0..w-1]
         drawn = drawGame' g
-        d c = M.findWithDefault "." c drawn
+        d c = M.findWithDefault (drawBoardCoord g c) c drawn
 
 gameInfo :: Game -> Team -> String
 gameInfo g t = unlines $ ss ++ gs
