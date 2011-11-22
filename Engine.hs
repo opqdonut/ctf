@@ -5,6 +5,7 @@ import Control.Monad
 import Data.List
 import Control.Monad.RWS
 import Data.Array
+import Data.Maybe
 
 -- | Geometry
 
@@ -36,15 +37,21 @@ move d c = c <+> trans d
 data Team = A | B
           deriving (Show, Eq)
 
+data Flag = Flag {flagTeam :: Team, flagCoord :: Coord}
+          deriving (Show)
+
+type Flags = [Flag]
+
 data SoldierState = SoldierState {soldierName :: Name,
                                   soldierTeam :: Team,
                                   soldierCoord :: Coord,
                                   hasGrenade :: Bool,
-                                  soldierAlive :: Bool}
+                                  soldierAlive :: Bool,
+                                  holdsFlag :: Maybe Flag}
                   deriving Show
                            
 mkSoldier :: Name -> Team -> Coord -> SoldierState
-mkSoldier n t c = SoldierState n t c True True
+mkSoldier n t c = SoldierState n t c True True Nothing
 
 type Soldiers = M.Map Name SoldierState
 
@@ -158,14 +165,28 @@ processEvent (EvRespawn (Respawn n)) = do new <- gets soldiers >>= mapMNamedSold
                                           
 -- | Board
 
-data Tile = Empty | Obstacle -- | FlagPlace Team
+data Tile = Empty | Obstacle | Spawn Team | Base Team
           deriving (Show, Eq)
 
 drawTile Empty = "."
 drawTile Obstacle = "#"
+drawTile (Spawn _) = ":"
+drawTile (Base _) = "="
 
-data Board = Board {boardContents :: Array Coord Tile,
-                    respawn :: Team -> Coord}
+data Board = Board {boardContents :: Array Coord Tile}
+             
+findBoard :: Board -> (Tile -> Bool) -> Maybe Coord
+findBoard b pred = fmap fst . find (pred.snd) . assocs . boardContents $ b
+             
+respawn :: Board -> Team -> Coord
+respawn b t = fromJust $ findBoard b pred
+  where pred (Spawn t') = t==t'
+        pred _ = False
+
+base :: Board -> Team -> Coord
+base b t = fromJust $ findBoard b pred
+  where pred (Base t') = t==t'
+        pred _ = False
 
 boardSize b = (w+1,h+1)
   where (w,h) = snd . bounds . boardContents $ b
@@ -179,12 +200,14 @@ validCoordinate c b = ok && val /= Obstacle
 
 data Game = Game {board :: Board,
                   soldiers :: Soldiers,
+                  flags :: Flags,
                   pendingEvents :: [Event]}
 
 mkGame :: Board -> [Name] -> [Name] -> Game
-mkGame b anames bnames = Game b s []
+mkGame b anames bnames = Game b s fs []
   where mks t n = mkSoldier n t (respawn b t)
         s = toSoldiers $ map (mks A) anames ++ map (mks B) bnames
+        fs = [Flag A (base b A), Flag B (base b B)]
 
 updateGame :: Game -> [Command] -> Game
 updateGame g commands = g' {pendingEvents = events'}
@@ -202,7 +225,7 @@ explosions = concatMap f
                         _ -> []
         
 drawGame' :: Game -> M.Map Coord String
-drawGame' game = M.fromListWith comb (gs++tss++es)
+drawGame' game = M.fromListWith comb (gs++tss++es++fs)
   where comb x y = x ++ "," ++ y
         gs = map drawGrenade . grenades . pendingEvents $ game
         drawGrenade g = (grenadeCoord g,show $ countdown g)
@@ -210,6 +233,8 @@ drawGame' game = M.fromListWith comb (gs++tss++es)
         drawExplosion (Explosion c) = (c,"X")
         tss = map drawSoldier . M.assocs . soldiers $ game
         drawSoldier (name,s) = (soldierCoord s,if soldierAlive s then name else "_")
+        fs = map drawFlag . flags $ game
+        drawFlag (Flag t c) = (c,"?"++show t)
         
 drawBoardCoord :: Game -> Coord -> String
 drawBoardCoord g c = drawTile . (!c) . boardContents . board $ g
@@ -223,8 +248,9 @@ drawGame g = unlines $ map (intercalate " " . map d) coords
         d c = M.findWithDefault (drawBoardCoord g c) c drawn
 
 gameInfo :: Game -> Team -> String
-gameInfo g t = unlines $ ss ++ gs
-  where ss = map show . filter ((==t).soldierTeam) . M.elems $ soldiers g
+gameInfo g t = unlines $ f: ss ++ gs
+  where f = show . fromJust  $ find ((==t).flagTeam) (flags g)
+        ss = map show . filter ((==t).soldierTeam) . M.elems $ soldiers g
         gs = map show . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
         
 gamePending :: Game -> String

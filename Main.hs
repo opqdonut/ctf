@@ -8,28 +8,30 @@ import Data.Array
 
 -- -- -- -- -- -- -- -- -- -- --
 
-sampleBoard = Board (listArray ((0,0),(14,14)) l) respawnf
-  where respawnf A = (0,0)
-        respawnf B = (14,14)
-        f x = case x of '#' -> Obstacle
+sampleBoard = Board (listArray ((0,0),(14,14)) l)
+  where f x = case x of '#' -> Obstacle
                         '.' -> Empty
+                        'A' -> Spawn A
+                        'B' -> Spawn B
+                        'a' -> Base A
+                        'b' -> Base B
                         _ -> error "evo"
         l = map f
-            "...............\
+            "A..............\
             \...............\
             \.........#.....\
             \...###...#.....\
             \...###...#.....\
             \...#.....#.....\
-            \........###....\
+            \.a......###....\
             \...............\
             \..###..........\
-            \....#..........\
+            \....#........b.\
             \....#....##....\
             \....#..####....\
             \.......####....\
             \.......####....\
-            \..............."
+            \..............B"
 
 sampleGame = mkGame sampleBoard ["A","B","C"] ["D","E","F"]
              
