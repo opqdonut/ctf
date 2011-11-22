@@ -35,7 +35,7 @@ move d c = c <+> trans d
 -- | Types
 
 data Team = A | B
-          deriving (Show, Eq, Ord)
+          deriving (Show, Eq, Ord, Ix)
                    
 opposing A = B
 opposing B = A
@@ -43,10 +43,10 @@ opposing B = A
 data Flag = Flag {flagTeam :: Team, flagCoord :: Coord}
           deriving (Show)
 
-type Flags = M.Map Team Flag
+type Flags = Array Team Flag
 
-fromFlags = M.elems
-toFlags = M.fromList . map f
+fromFlags = elems
+toFlags = array (A,B) . map f
   where f flag = (flagTeam flag, flag)
 
 data SoldierState = SoldierState {soldierName :: Name,
@@ -115,8 +115,8 @@ moveSoldier c ss =
               then ss {soldierCoord = to}
               else ss
                    
-getFlag t = gets $ fromJust . M.lookup t . flags
-putFlag f = modify $ \g -> g {flags = M.insert (flagTeam f) f (flags g)}
+getFlag t = gets $ (!t) . flags
+putFlag f = modify $ \g -> g {flags = flags g // [(flagTeam f, f)]}
 
 maybePickUpFlag ss =
   do opposingFlag <- getFlag opponent
@@ -274,7 +274,7 @@ drawGame g = unlines $ map (intercalate " " . map d) coords
 
 gameInfo :: Game -> Team -> String
 gameInfo g t = unlines $ f: ss ++ gs
-  where f = show . fromJust  $ find ((==t).flagTeam) (fromFlags $ flags g)
+  where f = show $ flags g ! t
         ss = map show . filter ((==t).soldierTeam) . M.elems $ soldiers g
         gs = map show . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
         
