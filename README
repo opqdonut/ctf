@@ -23,7 +23,6 @@ TODO
 ====
 
 - flags
-- obstacles
 - stdin/stdout communication with logics
 - scoring
 - read map from file

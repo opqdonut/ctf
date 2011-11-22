@@ -6,7 +6,32 @@ import Data.List
 import Control.Monad.RWS
 import Data.Array
 
+-- | Geometry
+
 type Coord = (Int,Int)
+
+data Dir = S | D | U | L | R
+         deriving (Show,Read,Eq)
+
+type Trans = (Int,Int)
+
+trans :: Dir -> Trans
+trans S = (0,0)
+trans U = (0,-1)
+trans D = (0,1)
+trans L = (-1,0)
+trans R = (1,0)
+
+manhattan :: Coord -> Coord -> Int
+manhattan (a,b) (c,d) = abs (a-c) + abs (b-d)
+               
+(<+>) :: Coord -> Trans -> Coord
+(a,b) <+> (c,d) = (a+c,b+d)
+
+move :: Dir -> Coord -> Coord
+move d c = c <+> trans d
+
+-- | Types
 
 data Team = A | B
           deriving (Show, Eq)
@@ -39,27 +64,6 @@ mapMNamedSoldier f name ss = case M.lookup name ss
                           of Nothing  -> return ss
                              (Just s) -> do s' <- f s
                                             return $ M.insert name s' ss
-                           
-data Dir = S | D | U | L | R
-         deriving (Show,Read,Eq)
-
-type Trans = (Int,Int)
-
-trans :: Dir -> Trans
-trans S = (0,0)
-trans U = (0,-1)
-trans D = (0,1)
-trans L = (-1,0)
-trans R = (1,0)
-
-manhattan :: Coord -> Coord -> Int
-manhattan (a,b) (c,d) = abs (a-c) + abs (b-d)
-               
-(<+>) :: Coord -> Trans -> Coord
-(a,b) <+> (c,d) = (a+c,b+d)
-
-move :: Dir -> Coord -> Coord
-move d c = c <+> trans d
 
 type Name = String
 
@@ -70,6 +74,8 @@ data Command = Command {commandName :: Name,
                         commandDirection :: Dir,
                         throwsGrenade :: Maybe Coord}
                deriving (Show,Eq)
+
+-- | Events
 
 data Respawn = Respawn {respawnName :: Name} deriving Show
 data Explosion = Explosion Coord deriving Show
@@ -85,7 +91,7 @@ runEventM f g = execRWS f () g
 pend :: Event -> EventM ()
 pend = tell . (:[])
 
--- Commands
+-- | Command handling
 
 moveSoldier :: Command -> SoldierState -> EventM SoldierState
 moveSoldier c ss = 
@@ -122,7 +128,7 @@ processCommands :: [Command]
                    -> EventM ()
 processCommands cs = mapM_ processCommand cs
 
--- events
+-- | Event handling
 
 kills :: SoldierState -> Explosion -> Bool
 kills s (Explosion (a,b)) = abs (a-c) <= 1 && abs (b-d) <= 1
@@ -150,7 +156,7 @@ processEvent (EvExplosion e) = do new <- gets soldiers >>= mapMSoldiers f
 processEvent (EvRespawn (Respawn n)) = do new <- gets soldiers >>= mapMNamedSoldier reviveSoldier n
                                           modify (\g -> g {soldiers = new})
                                           
--- board
+-- | Board
 
 data Tile = Empty | Obstacle -- | FlagPlace Team
           deriving (Show, Eq)
@@ -169,7 +175,7 @@ validCoordinate c b = ok && val /= Obstacle
   where ok = inRange (bounds . boardContents $ b) c
         val = boardContents b ! c
 
--- bring it together
+-- | Bring it together
 
 data Game = Game {board :: Board,
                   soldiers :: Soldiers,
