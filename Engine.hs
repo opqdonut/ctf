@@ -150,9 +150,16 @@ maybePickUpFlag ss =
 maybeMoveFlag ss =
   case holdsFlag ss of
     Nothing -> return ss
-    Just t -> do f <- getFlag t
-                 putFlag f { flagCoord = soldierCoord ss }
-                 return ss
+    Just t -> do let c = soldierCoord ss
+                 f <- getFlag t
+                 bc <- getBase $ soldierTeam ss
+                 if (flagCoord f == bc)
+                   then do gets (pointsCapture . rules) >>= givePoints (opposing t)
+                           c' <- getBase t
+                           putFlag $ Flag t c'
+                           return ss { holdsFlag = Nothing }
+                   else do putFlag f { flagCoord = c }
+                           return ss
 
 throw :: Command -> SoldierState -> EventM SoldierState
 throw (Command _ _ Nothing) st = return st
@@ -181,6 +188,22 @@ processCommand c = do new <- gets soldiers >>= mapMNamedSoldier (processSoldier 
 processCommands :: [Command]
                    -> EventM ()
 processCommands cs = mapM_ processCommand cs
+
+-- | Flag handling
+
+getBase :: Team -> EventM Coord
+getBase t = gets (flip base t . board)
+
+checkFlags :: EventM ()
+checkFlags = 
+  forM_ [A,B] $ \t ->
+     do f <- getFlag t
+        b <- getBase (opposing t)
+        when (b==flagCoord f) $
+          do gets (pointsCapture . rules) >>= givePoints (opposing t)
+             c' <- getBase t
+             putFlag $ Flag t c'   -- gah, need to grab flag from soldier too
+             
 
 -- | Event handling
 
