@@ -2,57 +2,110 @@ A D
 B D
 C D
 
-A D
+F L
 
 A D
 
-A D
+F L
 
 A D
 
-A D
-
-A R
-
-A R
-
-A R
-
-A R
-
-A R
+F L
 
 A D
 
-A D
-
-A R
-
-A R
-
-A R
-
-A R
-
-A R
-
-A R
-
-A R
+F L
 
 A D
 
+F L
+
+A D
+
+F L
+
 A R
+
+F L
+
+A R
+
+F L
+
+A R
+
+F L
+
+A R
+
+F L
+
+A R
+
+F L
+
+A D
+
+F L
+
+A D
+
+F L
+
+A R
+
+F U
+
+A R
+
+F U
+
+A R
+
+F U
+
+A R
+
+F U
+
+A R
+
+F U
+
+A R
+
+F U
+
+A R
+
+F U
+
+A D
+
+F U
+
+A R
+
+F U
 
 A U
-F U (7,13)
+
+F U
+D U (7,13)
 
 A U
 
-A U
+F U
 
 A U
 
+F U
+
 A U
 
+F U
+
+A U
+
+F R
 

@@ -3,8 +3,8 @@ module Main where
 import Engine
 import Input
 
-import Control.Monad
 import Data.Array
+import System.IO
 
 -- -- -- -- -- -- -- -- -- -- --
 
@@ -44,15 +44,13 @@ sampleBCommands = [Command "D" S Nothing,
                    Command "F" L Nothing]
                                  
 printGame x = putStrLn (drawGame x) >>
-              putStrLn "A:" >>
-              putStrLn (gameInfo x A) >>
-              putStrLn "B:" >>
-              putStrLn (gameInfo x B) >>
               putStrLn "pending:" >>
               putStrLn (gamePending x) >>
               putStrLn "--" 
                   
-step game = liftM (updateGame game) readCmds
+step game = do ca <- queryCmds stdout stdin game A
+               cb <- queryCmds stdout stdin game B
+               return . updateGame game $ ca ++ cb
 
 run game = do game' <- step game
               printGame game'
