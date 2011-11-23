@@ -5,7 +5,7 @@ Usage
 
 $ cabal configure
 $ cabal build
-$ ./dist/build/ctf/ctf < input.txt
+$ ./dist/build/ctf/ctf config < input.txt
 
 Example input.txt included.
 
@@ -19,15 +19,32 @@ Output format
 
 Description TODO, see output.
 
+Config format
+=============
+
+The first line should contain a Rules struct in Haskell format.
+
+The rest of the lines should describe the game map, one character per
+tile, rows ended by newlines. All lines should be of equal length. The
+meanings of the characters are:
+
+'.' - empty
+'#' - obstacle
+'A' - spawn of team A
+'B' - spawn of team B
+'a' - flag of team A
+'b' - flag of team B
+
+See the provided file "config" for an example.
+
 TODO
 ====
 
 - timeouts for reading commands
 - flag logic (succesful stealing, respawning, etc.)
-- rule file (number of rounds, grenade count, grenade cooldown, scoring, flag return, etc.)
+- more rules (number of rounds, grenade count, grenade cooldown, flag return, etc.)
 - map file (maybe included in rule file)
 - stdin/stdout communication with logics
-- read map from file
 
 
 

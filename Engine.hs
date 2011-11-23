@@ -114,7 +114,8 @@ data Rules = Rules {nRounds :: Int,
                     pointsKill :: Int,
                     pointsSteal :: Int,
                     pointsCapture :: Int, -- not used yet
-                    grenadeRange :: Int}                
+                    grenadeRange :: Int}
+           deriving (Read,Show)
              
 defaultRules = Rules {nRounds = 100,
                       pointsKill = 1,
@@ -253,8 +254,8 @@ data Game = Game {board :: Board,
                   points :: Points,
                   pendingEvents :: [Event]}
 
-mkGame :: Board -> [Name] -> [Name] -> Game
-mkGame b anames bnames = Game b defaultRules s fs ps []
+mkGame :: Board -> Rules -> [Name] -> [Name] -> Game
+mkGame b rules anames bnames = Game b rules s fs ps []
   where mks t n = mkSoldier n t (respawn b t)
         s = toSoldiers $ map (mks A) anames ++ map (mks B) bnames
         fs = toFlags $ [Flag A (base b A), Flag B (base b B)]
