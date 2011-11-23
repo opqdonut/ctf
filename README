@@ -23,6 +23,8 @@ TODO
 ====
 
 - flag logic (succesful stealing, respawning, etc.)
+- rule file (number of rounds, grenade count, grenade cooldown, scoring, flag return, etc.)
+- map file (maybe included in rule file)
 - stdin/stdout communication with logics
 - read map from file
 
