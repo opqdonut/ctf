@@ -22,6 +22,7 @@ Description TODO, see output.
 TODO
 ====
 
+- timeouts for reading commands
 - flag logic (succesful stealing, respawning, etc.)
 - rule file (number of rounds, grenade count, grenade cooldown, scoring, flag return, etc.)
 - map file (maybe included in rule file)

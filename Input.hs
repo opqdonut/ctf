@@ -3,6 +3,7 @@ module Input where
 import Engine
 
 import Data.List
+import Data.Array
 import Control.Applicative
 import System.IO
 import qualified Data.Map as M
@@ -33,3 +34,20 @@ queryCmds hout hin g t = do hPutStrLn hout $ gameInfo g t
                             if verifyCmds g t cs
                               then return cs
                               else error "commands not valid!"
+
+readBoard :: [String] -> Board
+readBoard strs = if ok
+                 then Board $ listArray ((0,0),(w-1,h-1)) tiles
+                 else error "line lengths in board don't match"
+  where h = length strs
+        w = length (head strs)
+        ok = all (==w) $ map length strs
+        tiles = map f (concat strs)
+        f x = case x of '#' -> Obstacle
+                        '.' -> Empty
+                        'A' -> Spawn A
+                        'B' -> Spawn B
+                        'a' -> Base A
+                        'b' -> Base B
+                        _ -> error $ "invalid tile: " ++ show x
+  

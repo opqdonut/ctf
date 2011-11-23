@@ -108,6 +108,20 @@ runEventM f g = execRWS f () g
 pend :: Event -> EventM ()
 pend = tell . (:[])
 
+-- | Rules
+
+data Rules = Rules {nRounds :: Int,
+                    pointsKill :: Int,
+                    pointsSteal :: Int,
+                    pointsCapture :: Int, -- not used yet
+                    grenadeRange :: Int}                
+             
+defaultRules = Rules {nRounds = 100,
+                      pointsKill = 1,
+                      pointsSteal = 10,
+                      pointsCapture = 100,
+                      grenadeRange = 10}
+
 -- | Command handling
 
 givePoints :: Team -> Int -> EventM ()
@@ -127,7 +141,7 @@ putFlag f = modify $ \g -> g {flags = flags g // [(flagTeam f, f)]}
 maybePickUpFlag ss =
   do opposingFlag <- getFlag opponent
      if flagCoord opposingFlag == soldierCoord ss && isNothing (holdsFlag ss)
-       then givePoints (soldierTeam ss) 10
+       then gets (pointsSteal.rules) >>= givePoints (soldierTeam ss)
             >> return ss {holdsFlag = Just opponent}
        else return ss
   where opponent = opposing (soldierTeam ss)
@@ -150,10 +164,11 @@ throw (Command _ _ (Just coord)) st =
 
 canThrow :: SoldierState -> Coord -> EventM Bool
 canThrow s c = do valid <- gets $ validCoordinate c . board
+                  range <- gets $ grenadeRange . rules
                   return $
                     valid 
                     && hasGrenade s
-                    && manhattan (soldierCoord s) c <= 10
+                    && manhattan (soldierCoord s) c <= range
                     
 processSoldier :: Command -> SoldierState -> EventM SoldierState
 processSoldier c = maybePickUpFlag >=> throw c >=> moveSoldier c >=> maybeMoveFlag
@@ -190,7 +205,7 @@ processEvent (EvExplosion e) = do new <- gets soldiers >>= mapMSoldiers f
                                   modify (\g -> g {soldiers = new})
   where f s
           | kills s e = do pend . EvRespawn . Respawn $ soldierName s
-                           givePoints (opposing $ soldierTeam s) 1
+                           gets (pointsKill . rules) >>= givePoints (opposing $ soldierTeam s)
                            return s {soldierAlive=False}
           | otherwise = return s
 processEvent (EvRespawn (Respawn n)) = do new <- gets soldiers >>= mapMNamedSoldier reviveSoldier n
@@ -232,13 +247,14 @@ validCoordinate c b = ok && val /= Obstacle
 -- | Bring it together
 
 data Game = Game {board :: Board,
+                  rules :: Rules,
                   soldiers :: Soldiers,
                   flags :: Flags,
                   points :: Points,
                   pendingEvents :: [Event]}
 
 mkGame :: Board -> [Name] -> [Name] -> Game
-mkGame b anames bnames = Game b s fs ps []
+mkGame b anames bnames = Game b defaultRules s fs ps []
   where mks t n = mkSoldier n t (respawn b t)
         s = toSoldiers $ map (mks A) anames ++ map (mks B) bnames
         fs = toFlags $ [Flag A (base b A), Flag B (base b B)]
