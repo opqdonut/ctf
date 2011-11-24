@@ -329,20 +329,24 @@ drawGame g dm = unlines $ map (intercalate " " . map d) coords
 coordToString :: Coord -> String
 coordToString (x,y) = printf "%d %d" x y
                      
+holdsFlagToString Nothing = "No"
+holdsFlagToString (Just A) = "A"
+holdsFlagToString (Just B) = "B"
+                      
 describeOwnSoldier :: SoldierState -> String
 describeOwnSoldier ss = printf "Soldier %s %s %d %s %s"
                         (soldierName ss)
                         (coordToString $ soldierCoord ss)
                         (soldierCooldown ss)
                         (show $ soldierAlive ss)
-                        (show $ holdsFlag ss)
+                        (holdsFlagToString $ holdsFlag ss)
                          
 describeEnemySoldier :: SoldierState -> String
 describeEnemySoldier ss = printf "Enemy %s %s %s %s"
                           (soldierName ss)
                           (coordToString $ soldierCoord ss)
                           (show $ soldierAlive ss)
-                          (show $ holdsFlag ss)
+                          (holdsFlagToString $ holdsFlag ss)
                    
 describeOwnFlag :: Flag -> String
 describeOwnFlag f = printf "Flag %s"

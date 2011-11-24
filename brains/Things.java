@@ -4,9 +4,8 @@ import java.util.Map;
 
 public class Things {
 
-    public static interface Thing {
-        //public static Thing parse(Scanner sc); //meh
-    }
+    /** Just a tag interface */
+    public static interface Thing {}
 
     public static class Soldier implements Thing {
         public final String name;
@@ -60,6 +59,42 @@ public class Things {
         }
     }
 
+    public static class Enemy implements Thing {
+        public final String name;
+        public final int x;
+        public final int y;
+        public final boolean alive;
+        public final String flag;
+
+        public Enemy(String name, int x, int y, boolean alive, String flag) {
+            this.name = name;
+            this.x = x;
+            this.y = y;
+            this.alive = alive;
+            this.flag = flag;
+        }
+
+        public Enemy(Scanner sc) {
+            this(sc.next(), sc.nextInt(), sc.nextInt(), sc.next()=="True", sc.next());
+        }
+    }
+
+
+    public static class EnemyFlag implements Thing {
+        public final int x;
+        public final int y;
+
+        public EnemyFlag(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public EnemyFlag(Scanner sc) {
+            this(sc.nextInt(), sc.nextInt());
+        }
+    }
+        
+
     public static Thing parseThing(String s) {
         Scanner sc = new Scanner(s);
 
@@ -71,7 +106,11 @@ public class Things {
             return new Flag(sc);
         else if (cl.equals("Grenade"))
             return new Grenade(sc);
+        else if (cl.equals("Enemy"))
+            return new Enemy(sc);
+        else if (cl.equals("EnemyFlag"))
+            return new EnemyFlag(sc);
         else
-            return null;
+            throw new Error("couldn't parse: "+s);
     }
 }
