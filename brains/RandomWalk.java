@@ -30,7 +30,7 @@ public class RandomWalk {
 
         ArrayList<Thing> things = new ArrayList<Thing>();
 
-        Thing.Team team = Thing.parseTeam(s.nextLine());
+        String team = s.nextLine();
 
         s.nextLine(); // skip points
 
@@ -42,8 +42,10 @@ public class RandomWalk {
         }
 
         for (Thing t : things) {
-            if (t.type == Thing.Type.SOLDIER && t.team == team) {
-                System.out.println(t.origStr.substring(29,30)+" "+randomDirection());
+            if (t.type == Thing.Type.SOLDIER && t.getProp("soldierTeam").equals(team)) {
+                String name = t.getProp("soldierName");
+                name = name.substring(1,name.length()-1); // remove ""
+                System.out.println(name+" "+randomDirection());
             }
         }
 

@@ -1,52 +1,63 @@
+import java.util.Scanner;
+import java.util.TreeMap;
+import java.util.Map;
+
 public class Thing {
-    public enum Team {A, B};
     public enum Type {SOLDIER, FLAG, GRENADE}
 
     public final Type type;
-    public final Team team;
-    public final int x;
-    public final int y;
     public final String origStr;
 
-    public Thing(Type type, Team team, int x, int y, String origStr) {
+    private final Map<String,String> props;
+
+    public Thing(Type type, Map<String,String> props, String origStr) {
         this.type=type;
-        this.team=team;
-        this.x=x;
-        this.y=y;
+        this.props=props;
         this.origStr=origStr;
     }
 
-    public static Team parseTeam(String s) {
-        if (s.contains("A"))
-            return Team.A;
-        else if (s.contains("B"))
-            return Team.B;
-        else 
-            throw new Error("Not a team: "+s);
+    public String getProp(String key) {
+        return props.get(key);
+    }
+
+    private static Map<String,String> parseProps(Scanner sc) {
+        
+        Map<String,String> m = new TreeMap<String,String>();
+
+        String s = sc.nextLine();
+        s = s.trim();
+        s = s.substring(1,s.length()-1); // discard {}
+        String[] pairs = s.split(", ");
+        
+        for (String p : pairs) {
+            String[] x = p.split("=");
+            String key = x[0].trim();
+            String val = x[1].trim();
+            m.put(key,val);
+            //System.out.println("DBG p:"+p+" key:"+key+" val:"+val);
+        }
+
+        return m;
     }
 
     public static Thing parseThing(String s) {
-        Team team;
         Type type;
 
-        if (s.contains("Team = A"))
-            team = Team.A;
-        else if (s.contains("Team = B"))
-            team = Team.B;
-        else
-            throw new Error("No team: "+s);
+        Scanner sc = new Scanner(s);
 
-        if (s.contains("SoldierState"))
+        String cl = sc.next();
+
+        if (cl.equals("SoldierState"))
             type = Type.SOLDIER;
-        else if (s.contains("Flag"))
+        else if (cl.equals("Flag"))
             type = Type.FLAG;
-        else if (s.contains("Grenade"))
+        else if (cl.equals("Grenade"))
             type = Type.GRENADE;
         else
-            throw new Error("Invalid type: "+s);
+            throw new Error("Invalid type: "+cl);
 
-        // no coords yet, sorry
+        Map<String,String> props = parseProps(sc);
 
-        return new Thing(type,team,-1,-1,s);
+        return new Thing(type,props,s);
     }
 }
