@@ -50,7 +50,7 @@ Executable ctf
   Main-is: Main.hs
   
   -- Packages needed in order to build this package.
-  Build-depends: base>=4, mtl, array, containers
+  Build-depends: base>=4, mtl, array, containers, process
 
   GHC-options: -W -Werror
   

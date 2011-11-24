@@ -5,9 +5,9 @@ Usage
 
 $ cabal configure
 $ cabal build
-$ ./dist/build/ctf/ctf config < input.txt
+$ ./dist/build/ctf/ctf config "(cat input_a.txt; cat >/dev/null)" "(cat input_b.txt; cat >/dev/null)"
 
-Example input.txt included.
+Example input_[ab].txt included.
 
 Input format
 ============
@@ -44,7 +44,6 @@ TODO
 - flag logic (succesful stealing, respawning, etc.)
 - more rules (number of rounds, grenade count, grenade cooldown, flag return, etc.)
 - map file (maybe included in rule file)
-- stdin/stdout communication with logics
 
 
 

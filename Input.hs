@@ -31,6 +31,7 @@ getCmds h = do l <- hGetLine h
 queryCmds :: Handle -> Handle -> Game -> Team -> IO [Command]
 queryCmds hout hin g t = do hPutStrLn hout $ gameInfo g t
                             cs <- getCmds hin
+                            putStrLn $ show t++": "++show cs
                             if verifyCmds g t cs
                               then return cs
                               else error "commands not valid!"

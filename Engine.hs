@@ -323,10 +323,10 @@ drawGame g = unlines $ map (intercalate " " . map d) coords
         d c = M.findWithDefault (drawBoardCoord g c) c drawn
 
 gameInfo :: Game -> Team -> String
-gameInfo g t = unlines $ p:f: ss ++ gs
+gameInfo g t = unlines $ show t:p:f: ss ++ gs
   where p = "Points "++show (points g ! t)
         f = show $ flags g ! t
-        ss = map show . filter ((==t).soldierTeam) . M.elems $ soldiers g
+        ss = map show . M.elems $ soldiers g
         gs = map show . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
         
 gamePending :: Game -> String
