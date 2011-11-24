@@ -12,15 +12,43 @@ $ ./dist/build/ctf/ctf config "(cd brains; java RandomWalk)" "(cd brains; java R
 
 Example input_[ab].txt included.
 
-Input format
-============
+Brain output format
+===================
 
-Description TODO, see input.txt.
+This is what your brain should output:
+
+<soldiername> <movementdirection> [<grenadecoord>]
+<soldiername> <movementdirection> [<grenadecoord>]
+...
+
+movementdirection: either U, L, D, R (the 4 directions) or S (stay still)
+grenadecoord: optional and should be of the form (<x,y>)
 
 Output format
 =============
 
-Description TODO, see output.
+This is what your brain gets from the engine:
+
+<yourpoints> <enemypoints>
+Flag <x> <y>
+Soldier <name> <x> <y> <cooldown> <alive> <flag>
+Soldier <name> <x> <y> <cooldown> <alive> <flag>
+Soldier <name> <x> <y> <cooldown> <alive> <flag>
+Grenade <x> <y> <countdown>
+EnemyFlag <x> <y>
+Enemy <name> <x> <y> <alive> <flag>
+Enemy <name> <x> <y> <alive> <flag>
+Enemy <name> <x> <y> <alive> <flag>
+<an empty line signals the end>
+
+x, y, cooldown, countdown: integers
+name: matched by the regex [A-Za-z]+
+alive: either "True" or "False"
+flag: either "No", "A", or "B"
+
+The entries are always in this order. There number of Soldier, Enemy
+and Grenade records can vary, but there will always be exactly one
+Flag and exactly one EnemyFlag record.
 
 Config format
 =============
@@ -43,8 +71,6 @@ See the provided file "config" for an example.
 TODO
 ====
 
-- document!
-- censor enemy hasGrenade?
 - timeouts for reading commands?
 
 
