@@ -28,7 +28,7 @@ public class RandomWalk {
 
     public static void oneRound(Scanner sc) {
 
-        ArrayList things = new ArrayList();
+        ArrayList<Things.Thing> things = new ArrayList();
 
         sc.nextLine(); // skip points
 
@@ -39,7 +39,7 @@ public class RandomWalk {
             l = sc.nextLine();
         }
 
-        for (Object t : things) {
+        for (Things.Thing t : things) {
             if (t instanceof Things.Soldier) {
                 Things.Soldier s = (Things.Soldier) t;
                 System.out.println(s.name+" "+randomDirection());
