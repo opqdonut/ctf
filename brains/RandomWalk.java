@@ -26,26 +26,23 @@ public class RandomWalk {
         return null; // not reached
     }
 
-    public static void oneRound(Scanner s) {
+    public static void oneRound(Scanner sc) {
 
-        ArrayList<Thing> things = new ArrayList<Thing>();
+        ArrayList things = new ArrayList();
 
-        String team = s.nextLine();
+        sc.nextLine(); // skip points
 
-        s.nextLine(); // skip points
-
-        String l = s.nextLine();
+        String l = sc.nextLine();
 
         while (!"".equals(l)) {
-            things.add(Thing.parseThing(l));
-            l = s.nextLine();
+            things.add(Things.parseThing(l));
+            l = sc.nextLine();
         }
 
-        for (Thing t : things) {
-            if (t.type == Thing.Type.SOLDIER && t.getProp("soldierTeam").equals(team)) {
-                String name = t.getProp("soldierName");
-                name = name.substring(1,name.length()-1); // remove ""
-                System.out.println(name+" "+randomDirection());
+        for (Object t : things) {
+            if (t instanceof Things.Soldier) {
+                Things.Soldier s = (Things.Soldier) t;
+                System.out.println(s.name+" "+randomDirection());
             }
         }
 

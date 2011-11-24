@@ -6,6 +6,7 @@ import Data.List
 import Control.Monad.RWS
 import Data.Array
 import Data.Maybe
+import Text.Printf
 
 -- | Geometry
 
@@ -315,7 +316,7 @@ drawGame' game = M.fromListWith comb (gs++tss++es++fs)
         
 drawBoardCoord :: Game -> Coord -> String
 drawBoardCoord g c = drawTile . (!c) . boardContents . board $ g
-        
+                     
 drawGame :: Game -> DrawMode -> String
 drawGame g dm = unlines $ map (intercalate " " . map d) coords
   where (w,h) = boardSize . board $ g
@@ -324,13 +325,48 @@ drawGame g dm = unlines $ map (intercalate " " . map d) coords
         drawn = case dm of DrawBoard -> M.empty
                            DrawAll -> drawGame' g
         d c = M.findWithDefault (drawBoardCoord g c) c drawn
+                     
+coordToString :: Coord -> String
+coordToString (x,y) = printf "%d %d" x y
+                     
+describeOwnSoldier :: SoldierState -> String
+describeOwnSoldier ss = printf "Soldier %s %s %d %s %s"
+                        (soldierName ss)
+                        (coordToString $ soldierCoord ss)
+                        (soldierCooldown ss)
+                        (show $ soldierAlive ss)
+                        (show $ holdsFlag ss)
+                         
+describeEnemySoldier :: SoldierState -> String
+describeEnemySoldier ss = printf "Enemy %s %s %s %s"
+                          (soldierName ss)
+                          (coordToString $ soldierCoord ss)
+                          (show $ soldierAlive ss)
+                          (show $ holdsFlag ss)
+                   
+describeOwnFlag :: Flag -> String
+describeOwnFlag f = printf "Flag %s"
+                    (coordToString $ flagCoord f)
+                    
+describeEnemyFlag :: Flag -> String
+describeEnemyFlag f = printf "EnemyFlag %s"
+                      (coordToString $ flagCoord f)
+                      
+describeGrenade :: Grenade -> String
+describeGrenade g = printf "Grenade %s %d"
+                    (coordToString $ grenadeCoord g)
+                    (countdown g)                     
 
 gameInfo :: Game -> Team -> String
-gameInfo g t = unlines $ show t:p:fs++ss++gs
-  where p = "Points "++show (points g ! t)
-        fs = map show . elems $ flags g
-        ss = map show . fromSoldiers $ soldiers g
-        gs = map show . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
+gameInfo g t = unlines $ concat [[p],[fo],so,gs,[fe],se]
+  where opponent = opposing t
+        p = show (points g ! t)++" "++show (points g ! opponent)
+        fo = describeOwnFlag (flags g ! t)
+        fe = describeEnemyFlag (flags g ! opponent)
+        solds = fromSoldiers $ soldiers g
+        so = map describeOwnSoldier . filter ((==t).soldierTeam) $ solds
+        se = map describeEnemySoldier . filter ((==opponent).soldierTeam) $ solds
+        gs = map describeGrenade . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
         
 gameObjects :: Game -> String
 gameObjects g = unlines $ ps++fs++ss
