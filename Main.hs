@@ -33,8 +33,10 @@ readConfFile confFile = do (srules:smap) <- fmap lines $ readFile confFile
 main = do
   (confFile:cmd1:cmd2:_) <- getArgs
   (rules,board) <- readConfFile confFile
-  (out1,in1,_err1,_ph1) <- runInteractiveCommand cmd1
-  (out2,in2,_err2,_ph2) <- runInteractiveCommand cmd2
+  (out1,in1,err1,_ph1) <- runInteractiveCommand cmd1
+  (out2,in2,err2,_ph2) <- runInteractiveCommand cmd2
+
+  mapM_ (\h -> hSetBuffering h LineBuffering) [out1,in1,out2,in2,err1,err2]
 
   let step g = do printGame g
                   c1 <- queryCmds out1 in1 g A
