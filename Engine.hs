@@ -57,13 +57,13 @@ toFlags = array (A,B) . map f
 data SoldierState = SoldierState {soldierName :: Name,
                                   soldierTeam :: Team,
                                   soldierCoord :: Coord,
-                                  hasGrenade :: Bool,
+                                  soldierCooldown :: Int,
                                   soldierAlive :: Bool,
                                   holdsFlag :: Maybe Team}
                   deriving Show
                            
-mkSoldier :: Name -> Team -> Coord -> SoldierState
-mkSoldier n t c = SoldierState n t c True True Nothing
+mkSoldier :: Name -> Team -> Coord -> Int -> SoldierState
+mkSoldier n t c g = SoldierState n t c g True Nothing
 
 type Soldiers = M.Map Name SoldierState
 
@@ -114,14 +114,16 @@ data Rules = Rules {nRounds :: Int,
                     pointsKill :: Int,
                     pointsSteal :: Int,
                     pointsCapture :: Int, -- not used yet
-                    grenadeRange :: Int}
+                    grenadeRange :: Int,
+                    grenadeCooldown :: Int}
            deriving (Read,Show)
              
 defaultRules = Rules {nRounds = 100,
                       pointsKill = 1,
                       pointsSteal = 10,
                       pointsCapture = 100,
-                      grenadeRange = 10}
+                      grenadeRange = 10,
+                      grenadeCooldown = 8}
 
 -- | Command handling
 
@@ -167,7 +169,8 @@ throw (Command _ _ (Just coord)) st =
   do ok <- canThrow st coord
      if ok
        then do pend . EvGrenade $ Grenade coord (soldierTeam st) 2
-               return st {hasGrenade = False}
+               cd <- gets $ grenadeCooldown . rules
+               return st {soldierCooldown = cd}
        else return st
 
 canThrow :: SoldierState -> Coord -> EventM Bool
@@ -175,19 +178,23 @@ canThrow s c = do valid <- gets $ validCoordinate c . board
                   range <- gets $ grenadeRange . rules
                   return $
                     valid 
-                    && hasGrenade s
+                    && soldierCooldown s == 0
                     && manhattan (soldierCoord s) c <= range
                     
-processSoldier :: Command -> SoldierState -> EventM SoldierState
-processSoldier c = maybePickUpFlag >=> throw c >=> moveSoldier c >=> maybeMoveFlag
-
-processCommand :: Command -> EventM ()
-processCommand c = do new <- gets soldiers >>= mapMNamedSoldier (processSoldier c) (commandName c)
-                      modify (\g -> g {soldiers = new})
+coolDown :: SoldierState -> EventM SoldierState
+coolDown ss = return ss {soldierCooldown = c}
+  where c = max 0 (soldierCooldown ss - 1)
+                    
+-- XXX this is somewhat ugly:
+processSoldier :: Maybe Command -> SoldierState -> EventM SoldierState
+processSoldier (Just c) = maybePickUpFlag >=> throw c >=> moveSoldier c >=> maybeMoveFlag >=> coolDown
+processSoldier Nothing = coolDown
 
 processCommands :: [Command]
                    -> EventM ()
-processCommands cs = mapM_ processCommand cs
+processCommands cs = do new <- gets soldiers >>= mapMSoldiers f
+                        modify (\g -> g {soldiers = new})
+  where f ss = processSoldier (find ((==soldierName ss).commandName) cs) ss
 
 -- | Event handling
 
@@ -198,8 +205,10 @@ kills s (Explosion (a,b)) = abs (a-c) <= 1 && abs (b-d) <= 1
 reviveSoldier :: SoldierState -> EventM SoldierState
 reviveSoldier s
   | not (soldierAlive s) = do r <- gets $ respawn.board
-                              return s { soldierAlive = True, soldierCoord = r (soldierTeam s), 
-                                         hasGrenade = True, holdsFlag = Nothing }
+                              c <- gets $ grenadeCooldown.rules
+                              return s { soldierAlive = True,
+                                         soldierCoord = r (soldierTeam s), 
+                                         soldierCooldown = c, holdsFlag = Nothing }
   | otherwise = return s
 
 processEvents :: EventM ()
@@ -268,7 +277,7 @@ data Game = Game {board :: Board,
 
 mkGame :: Board -> Rules -> [Name] -> [Name] -> Game
 mkGame b rules anames bnames = Game b rules s fs ps []
-  where mks t n = mkSoldier n t (respawn b t)
+  where mks t n = mkSoldier n t (respawn b t) (grenadeCooldown rules)
         s = toSoldiers $ map (mks A) anames ++ map (mks B) bnames
         fs = toFlags $ [Flag A (base b A), Flag B (base b B)]
         ps = array (A,B) [(A,0),(B,0)]
@@ -296,7 +305,7 @@ drawGame' game = M.fromListWith comb (gs++tss++es++fs)
         gs = map drawGrenade . grenades . pendingEvents $ game
         drawGrenade g = (grenadeCoord g,show $ countdown g)
         es = map drawExplosion . explosions . pendingEvents $ game
-        drawExplosion (Explosion c) = (c,"X")
+        drawExplosion (Explosion c) = (c,"%")
         tss = map drawSoldier . M.assocs . soldiers $ game
         drawSoldier (name,s) = (soldierCoord s,if soldierAlive s then name else "_")
         fs = map drawFlag . fromFlags . flags $ game
@@ -318,8 +327,14 @@ gameInfo :: Game -> Team -> String
 gameInfo g t = unlines $ show t:p:fs++ss++gs
   where p = "Points "++show (points g ! t)
         fs = map show . elems $ flags g
-        ss = map show . M.elems $ soldiers g
+        ss = map show . fromSoldiers $ soldiers g
         gs = map show . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
+        
+gameObjects :: Game -> String
+gameObjects g = unlines $ ps++fs++ss
+  where ps = map show . assocs $ points g
+        fs = map show . fromFlags $ flags g
+        ss = map show . fromSoldiers $ soldiers g
         
 gamePending :: Game -> String
 gamePending g = unlines $ map show $ pendingEvents g

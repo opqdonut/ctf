@@ -1,69 +1,102 @@
 N L
+M L (8,9)
 
 N L
+M U (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N L
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 L U (7,13)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N U
+M S (8,9)
 
 N R
+M S (8,9)
 
 N R
+M S (8,9)
 
 N R
+M S (8,9)
 
 N R
+M S (8,9)
 
 N R
+M S (8,9)
 
 N R
+M S (8,9)
 
 N R
+M S (8,9)
 
 N R
 

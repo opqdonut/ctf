@@ -9,6 +9,8 @@ import System.Process
 import Data.Array
 
 printGame x = putStrLn (drawGame x DrawAll) >>
+              putStrLn "objects:" >>
+              putStrLn (gameObjects x) >>
               putStrLn "pending:" >>
               putStrLn (gamePending x) >>
               putStrLn "--" 
