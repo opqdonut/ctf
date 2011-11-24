@@ -241,6 +241,11 @@ drawTile (Base A) = "a"
 drawTile (Base B) = "b"
 
 data Board = Board {boardContents :: Array Coord Tile}
+
+drawBoard (Board arr) = unlines $
+                        [ concat [ drawTile (arr!(y,x)) | x <-[0..w] ]
+                        | y <- [0..h] ]
+  where (w,h) = snd $ bounds arr
              
 findBoard :: Board -> (Tile -> Bool) -> Maybe Coord
 findBoard b pred = fmap fst . find (pred.snd) . assocs . boardContents $ b

@@ -48,8 +48,8 @@ main = do
       run n g = step g >>= run (n-1)
       game = mkGame board rules ["X","Y","Z"] ["L","M","N"]
 
-  hPutStrLn out1 (drawGame game DrawBoard)
-  hPutStrLn out2 (drawGame game DrawBoard)
+  hPutStrLn out1 (drawBoard board)
+  hPutStrLn out2 (drawBoard board)
 
   run (nRounds rules) game
 
