@@ -112,15 +112,13 @@ pend = tell . (:[])
 
 data Rules = Rules {nRounds :: Int,
                     pointsKill :: Int,
-                    pointsSteal :: Int,
-                    pointsCapture :: Int, -- not used yet
+                    pointsCapture :: Int,
                     grenadeRange :: Int,
                     grenadeCooldown :: Int}
            deriving (Read,Show)
              
 defaultRules = Rules {nRounds = 100,
                       pointsKill = 1,
-                      pointsSteal = 10,
                       pointsCapture = 100,
                       grenadeRange = 10,
                       grenadeCooldown = 8}
@@ -142,12 +140,11 @@ getFlag t = gets $ (!t) . flags
 putFlag f = modify $ \g -> g {flags = flags g // [(flagTeam f, f)]}
 
 maybePickUpFlag ss =
-  do opposingFlag <- getFlag opponent
+  do let opponent = opposing (soldierTeam ss)
+     opposingFlag <- getFlag opponent
      if flagCoord opposingFlag == soldierCoord ss && isNothing (holdsFlag ss)
-       then gets (pointsSteal.rules) >>= givePoints (soldierTeam ss)
-            >> return ss {holdsFlag = Just opponent}
+       then return ss {holdsFlag = Just opponent}
        else return ss
-  where opponent = opposing (soldierTeam ss)
 
 maybeMoveFlag ss =
   case holdsFlag ss of
