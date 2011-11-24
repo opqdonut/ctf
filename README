@@ -43,10 +43,10 @@ See the provided file "config" for an example.
 TODO
 ====
 
-- timeouts for reading commands
-- flag logic (succesful stealing, respawning, etc.)
-- more rules (number of rounds, grenade count, grenade cooldown, flag return, etc.)
-- map file (maybe included in rule file)
+- document!
+- grenade cooldown!
+- censor enemy hasGrenade?
+- timeouts for reading commands?
 
 
 
