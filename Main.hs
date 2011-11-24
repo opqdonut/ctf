@@ -8,12 +8,12 @@ import System.Environment
 import System.Process
 import Data.Array
 
-printGame x = putStrLn (drawGame x) >>
+printGame x = putStrLn (drawGame x DrawAll) >>
               putStrLn "pending:" >>
               putStrLn (gamePending x) >>
               putStrLn "--" 
                   
-printStats x = do putStrLn "Final score"
+printStats x = do putStr "Final score: "
                   putStrLn $ "A " ++ show (points x ! A) ++ " - B " ++ show (points x ! B)
               
 step game = do ca <- queryCmds stdout stdin game A
@@ -42,7 +42,10 @@ main = do
                   return . updateGame g $ c1++c2
       run 0 g = printStats g
       run n g = step g >>= run (n-1)
-      game = mkGame board rules ["A","B","C"] ["D","E","F"]
+      game = mkGame board rules ["X","Y","Z"] ["L","M","N"]
+
+  hPutStrLn out1 (drawGame game DrawBoard)
+  hPutStrLn out2 (drawGame game DrawBoard)
 
   run (nRounds rules) game
 

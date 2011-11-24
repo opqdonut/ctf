@@ -189,22 +189,6 @@ processCommands :: [Command]
                    -> EventM ()
 processCommands cs = mapM_ processCommand cs
 
--- | Flag handling
-
-getBase :: Team -> EventM Coord
-getBase t = gets (flip base t . board)
-
-checkFlags :: EventM ()
-checkFlags = 
-  forM_ [A,B] $ \t ->
-     do f <- getFlag t
-        b <- getBase (opposing t)
-        when (b==flagCoord f) $
-          do gets (pointsCapture . rules) >>= givePoints (opposing t)
-             c' <- getBase t
-             putFlag $ Flag t c'   -- gah, need to grab flag from soldier too
-             
-
 -- | Event handling
 
 kills :: SoldierState -> Explosion -> Bool
@@ -242,8 +226,10 @@ data Tile = Empty | Obstacle | Spawn Team | Base Team
 
 drawTile Empty = "."
 drawTile Obstacle = "#"
-drawTile (Spawn _) = ":"
-drawTile (Base _) = "="
+drawTile (Spawn A) = "A"
+drawTile (Spawn B) = "B"
+drawTile (Base A) = "a"
+drawTile (Base B) = "b"
 
 data Board = Board {boardContents :: Array Coord Tile}
              
@@ -259,6 +245,9 @@ base :: Board -> Team -> Coord
 base b t = fromJust $ findBoard b pred
   where pred (Base t') = t==t'
         pred _ = False
+        
+getBase :: Team -> EventM Coord
+getBase t = gets (flip base t . board)
 
 boardSize b = (w+1,h+1)
   where (w,h) = snd . bounds . boardContents $ b
@@ -299,6 +288,8 @@ explosions = concatMap f
   where f e = case e of EvExplosion ex -> [ex]
                         _ -> []
         
+data DrawMode = DrawBoard | DrawAll
+
 drawGame' :: Game -> M.Map Coord String
 drawGame' game = M.fromListWith comb (gs++tss++es++fs)
   where comb x y = x ++ "," ++ y
@@ -314,18 +305,19 @@ drawGame' game = M.fromListWith comb (gs++tss++es++fs)
 drawBoardCoord :: Game -> Coord -> String
 drawBoardCoord g c = drawTile . (!c) . boardContents . board $ g
         
-drawGame :: Game -> String
-drawGame g = unlines $ map (intercalate " " . map d) coords
+drawGame :: Game -> DrawMode -> String
+drawGame g dm = unlines $ map (intercalate " " . map d) coords
   where (w,h) = boardSize . board $ g
         coords :: [[Coord]]
         coords = map (\x -> map ((,)x) [0..h-1]) [0..w-1]
-        drawn = drawGame' g
+        drawn = case dm of DrawBoard -> M.empty
+                           DrawAll -> drawGame' g
         d c = M.findWithDefault (drawBoardCoord g c) c drawn
 
 gameInfo :: Game -> Team -> String
-gameInfo g t = unlines $ show t:p:f: ss ++ gs
+gameInfo g t = unlines $ show t:p:fs++ss++gs
   where p = "Points "++show (points g ! t)
-        f = show $ flags g ! t
+        fs = map show . elems $ flags g
         ss = map show . M.elems $ soldiers g
         gs = map show . filter ((==t).grenadeTeam) . grenades $ pendingEvents g
         
