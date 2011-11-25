@@ -46,8 +46,8 @@ maxSoldiers = min (length anames) (length bnames)
 main = do
   (confFile:cmd1:cmd2:_) <- getArgs
   (rules,board) <- readConfFile confFile
-  (out1,in1,err1,_ph1) <- runInteractiveCommand cmd1
-  (out2,in2,err2,_ph2) <- runInteractiveCommand cmd2
+  (out1,in1,err1,ph1) <- runInteractiveCommand cmd1
+  (out2,in2,err2,ph2) <- runInteractiveCommand cmd2
 
   mapM_ (\h -> hSetBuffering h LineBuffering) [out1,in1,out2,in2,err1,err2]
 
@@ -63,6 +63,9 @@ main = do
   hPutStrLn out2 (drawBoard board)
 
   run (nRounds rules) game
+
+  mapM_ hClose [out1,in1,out2,in2,err1,err2]
+  mapM_ terminateProcess [ph1,ph2]
 
 main2 = do
   confFile:_ <- getArgs
