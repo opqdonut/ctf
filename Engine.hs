@@ -112,6 +112,7 @@ pend = tell . (:[])
 -- | Rules
 
 data Rules = Rules {nRounds :: Int,
+                    nSoldiers :: Int,
                     pointsKill :: Int,
                     pointsCapture :: Int,
                     grenadeRange :: Int,
@@ -119,6 +120,7 @@ data Rules = Rules {nRounds :: Int,
            deriving (Read,Show)
              
 defaultRules = Rules {nRounds = 100,
+                      nSoldiers = 3,
                       pointsKill = 1,
                       pointsCapture = 100,
                       grenadeRange = 10,

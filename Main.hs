@@ -3,9 +3,11 @@ module Main where
 import Engine
 import Input
 
+import Control.Monad
 import System.IO
 import System.Environment
 import System.Process
+import System.Exit
 import Data.Array
 
 printGame x = putStrLn (drawGame x DrawAll) >>
@@ -30,7 +32,16 @@ readConfFile :: String -> IO (Rules,Board)
 readConfFile confFile = do (srules:smap) <- fmap lines $ readFile confFile
                            let rules = read srules
                                board = readBoard smap
+                           
+                           when (nSoldiers rules > maxSoldiers) $ do
+                             hPutStrLn stderr "nSoldiers is too big!"
+                             exitFailure
+                             
                            return (rules, board)
+
+anames = ["X","Y","Z","W","V","U","T"]
+bnames = ["L","M","N","P","Q","R","S"]
+maxSoldiers = min (length anames) (length bnames)
 
 main = do
   (confFile:cmd1:cmd2:_) <- getArgs
@@ -46,7 +57,7 @@ main = do
                   return . updateGame g $ c1++c2
       run 0 g = printStats g
       run n g = step g >>= run (n-1)
-      game = mkGame board rules ["X","Y","Z"] ["L","M","N"]
+      game = mkGame board rules (take (nSoldiers rules) anames) (take (nSoldiers rules) bnames)
 
   hPutStrLn out1 (drawBoard board)
   hPutStrLn out2 (drawBoard board)
