@@ -145,7 +145,9 @@ putFlag f = modify $ \g -> g {flags = flags g // [(flagTeam f, f)]}
 maybePickUpFlag ss =
   do let opponent = opposing (soldierTeam ss)
      opposingFlag <- getFlag opponent
-     if flagCoord opposingFlag == soldierCoord ss && isNothing (holdsFlag ss)
+     solds <- gets $ fromSoldiers.soldiers
+     if flagCoord opposingFlag == soldierCoord ss
+        && all (\ss -> holdsFlag ss /= Just opponent) solds
        then return ss {holdsFlag = Just opponent}
        else return ss
 
@@ -223,7 +225,8 @@ processEvent (EvExplosion e) = do new <- gets soldiers >>= mapMSoldiers f
   where f s
           | kills s e = do pend . EvRespawn . Respawn $ soldierName s
                            gets (pointsKill . rules) >>= givePoints (opposing $ soldierTeam s)
-                           return s {soldierAlive=False}
+                           return s {soldierAlive = False,
+                                     holdsFlag = Nothing}
           | otherwise = return s
 processEvent (EvRespawn (Respawn n)) = do new <- gets soldiers >>= mapMNamedSoldier reviveSoldier n
                                           modify (\g -> g {soldiers = new})
