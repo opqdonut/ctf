@@ -60,3 +60,8 @@ Executable ctf
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   -- Build-tools:         
   
+Executable test
+  Main-is: EngineTest.hs
+  Build-depends: base>=4, mtl, array, containers, process, QuickCheck>=2.4
+  GHC-options: -W -Werror
+

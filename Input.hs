@@ -5,6 +5,7 @@ import Engine
 import Data.List
 import Data.Array
 import Control.Applicative
+import Control.Monad
 import System.IO
 import qualified Data.Map as M
 
@@ -52,3 +53,12 @@ readBoard strs = if ok
                         'b' -> Base B
                         _ -> error $ "invalid tile: " ++ show x
   
+readConfFile :: String -> IO (Rules,Board)
+readConfFile confFile = do (srules:smap) <- fmap lines $ readFile confFile
+                           let rules = read srules
+                               board = readBoard smap
+                           
+                           when (nSoldiers rules > maxSoldiers) $ do
+                             fail "nSoldiers is too big!"
+                             
+                           return (rules, board)

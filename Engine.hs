@@ -244,6 +244,7 @@ drawTile (Base A) = "a"
 drawTile (Base B) = "b"
 
 data Board = Board {boardContents :: Array Coord Tile}
+           deriving Show
 
 drawBoard (Board arr) = unlines $
                         [ concat [ drawTile (arr!(y,x)) | x <-[0..w] ]
@@ -282,13 +283,22 @@ data Game = Game {board :: Board,
                   flags :: Flags,
                   points :: Points,
                   pendingEvents :: [Event]}
+            deriving Show
 
-mkGame :: Board -> Rules -> [Name] -> [Name] -> Game
-mkGame b rules anames bnames = Game b rules s fs ps []
+mkGame' :: Board -> Rules -> [Name] -> [Name] -> Game
+mkGame' b rules anames bnames = Game b rules s fs ps []
   where mks t n = mkSoldier n t (respawn b t) (grenadeCooldown rules)
         s = toSoldiers $ map (mks A) anames ++ map (mks B) bnames
         fs = toFlags $ [Flag A (base b A), Flag B (base b B)]
         ps = array (A,B) [(A,0),(B,0)]
+        
+anames = ["X","Y","Z","W","V","U","T"]
+bnames = ["L","M","N","P","Q","R","S"]
+maxSoldiers = min (length anames) (length bnames)
+
+mkGame :: Board -> Rules -> Game
+mkGame board rules = mkGame' board rules (take n anames) (take n bnames)
+  where n = nSoldiers rules
 
 updateGame :: Game -> [Command] -> Game
 updateGame g commands = g' {pendingEvents = events'}
