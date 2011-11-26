@@ -3,6 +3,7 @@ module Main where
 import Engine
 import Input
 
+import Data.Array
 import Data.List
 import Data.Maybe
 import Control.Applicative
@@ -29,7 +30,8 @@ checkSoldiers g =
       check s = printTestCase ("checkSoldier:\n"++show s) $
                 conjoin
                  [soldierCooldown s <= grenadeCooldown (rules g),
-                  soldierCooldown s >= 0]
+                  soldierCooldown s >= 0,
+                  boardContents (board g) ! soldierCoord s /= Obstacle]
   in conjoin (map check ss)
 
 checkGame g = conjoin . map ($g) $
