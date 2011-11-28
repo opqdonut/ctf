@@ -26,13 +26,16 @@ run game = do game' <- step game
               printGame game'
               run game'
 
+spawn cmd = createProcess (shell cmd) {std_in = CreatePipe,
+                                       std_out = CreatePipe}
+
 main = do
   (confFile:cmd1:cmd2:_) <- getArgs
   (rules,board) <- readConfFile confFile
-  (out1,in1,err1,ph1) <- runInteractiveCommand cmd1
-  (out2,in2,err2,ph2) <- runInteractiveCommand cmd2
+  (Just out1,Just in1,Nothing,ph1) <- spawn cmd1
+  (Just out2,Just in2,Nothing,ph2) <- spawn cmd2
 
-  mapM_ (\h -> hSetBuffering h LineBuffering) [out1,in1,out2,in2,err1,err2]
+  mapM_ (\h -> hSetBuffering h LineBuffering) [out1,in1,out2,in2]
 
   hPutStrLn out1 (show A)
   hPutStrLn out1 (drawBoard board)
@@ -49,5 +52,5 @@ main = do
 
   run (nRounds rules) game
 
-  mapM_ hClose [out1,in1,out2,in2,err1,err2]
+  mapM_ hClose [out1,in1,out2,in2]
   mapM_ terminateProcess [ph1,ph2]
