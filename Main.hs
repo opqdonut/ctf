@@ -34,6 +34,11 @@ main = do
 
   mapM_ (\h -> hSetBuffering h LineBuffering) [out1,in1,out2,in2,err1,err2]
 
+  hPutStrLn out1 (show A)
+  hPutStrLn out1 (drawBoard board)
+  hPutStrLn out2 (show B)
+  hPutStrLn out2 (drawBoard board)
+
   let step g = do printGame g
                   c1 <- queryCmds out1 in1 g A
                   c2 <- queryCmds out2 in2 g B
@@ -41,9 +46,6 @@ main = do
       run 0 g = printStats g
       run n g = step g >>= run (n-1)
       game = mkGame board rules
-
-  hPutStrLn out1 (drawBoard board)
-  hPutStrLn out2 (drawBoard board)
 
   run (nRounds rules) game
 

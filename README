@@ -27,7 +27,23 @@ grenadecoord: optional and should be of the form (<x>,<y>)
 Output format
 =============
 
-This is what your brain gets from the engine:
+This is what your brain gets from the engine.
+
+At the start of the game:
+
+<yourteam>
+<map>
+<emptyline>
+
+yourteam: "A" or "B"
+map: m lines of n characters representing an nxm tile map.
+     The meanings of the tiles are:
+     . -- empty
+     # -- obstacle
+     A,B -- spawn of team A, spawn of team B
+     a,b -- base (flag) of team A, base of team B
+
+For each round:
 
 <yourpoints> <enemypoints>
 Flag <x> <y>
