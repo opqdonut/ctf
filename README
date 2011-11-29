@@ -12,10 +12,10 @@ $ ./dist/build/ctf/ctf config "(cd brains; java RandomWalk)" "(cd brains; java R
 
 Example input_[ab].txt included.
 
-Brain output format
-===================
+Brain->Engine communication format
+==================================
 
-This is what your brain should output:
+This is what your brain should output on stdout:
 
 <soldiername> <movementdirection> [<grenadecoord>]
 <soldiername> <movementdirection> [<grenadecoord>]
@@ -24,10 +24,10 @@ This is what your brain should output:
 movementdirection: either U, L, D, R (the 4 directions) or S (stay still)
 grenadecoord: optional and should be of the form (<x>,<y>)
 
-Output format
-=============
+Engine->Brain format
+====================
 
-This is what your brain gets from the engine.
+This is what your brain gets from the engine on stdin.
 
 At the start of the game:
 
@@ -83,6 +83,16 @@ meanings of the characters are:
 'b' - flag of team B
 
 See the provided file "config" for an example.
+
+Engine output
+=============
+
+The stdout of the engine contains a log of game events. The last line
+on stdout is either the score in the format "Final score: A 0 - B 101"
+or "<teamname> failed" if a brain terminates prematurely.
+
+The stderr of the engine contains the stderrs of the two brains, each
+line labeled by the team of the brain that produced it.
 
 TODO
 ====
