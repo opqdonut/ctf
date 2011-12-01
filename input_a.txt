@@ -1,4 +1,4 @@
-X D
+X D 
 Y D
 Z D
 
@@ -19,6 +19,8 @@ X R
 X R
 
 X R
+Y S (1,1)
+Z S (1,1)
 
 X R
 

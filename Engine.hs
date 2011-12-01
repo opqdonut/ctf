@@ -223,10 +223,11 @@ processEvent (EvGrenade g)
 processEvent (EvExplosion e) = do new <- gets soldiers >>= mapMSoldiers f
                                   modify (\g -> g {soldiers = new})
   where f s
-          | kills s e = do pend . EvRespawn . Respawn $ soldierName s
-                           gets (pointsKill . rules) >>= givePoints (opposing $ soldierTeam s)
-                           return s {soldierAlive = False,
-                                     holdsFlag = Nothing}
+          | soldierAlive s && kills s e =
+            do pend . EvRespawn . Respawn $ soldierName s
+               gets (pointsKill . rules) >>= givePoints (opposing $ soldierTeam s)
+               return s {soldierAlive = False,
+                         holdsFlag = Nothing}
           | otherwise = return s
 processEvent (EvRespawn (Respawn n)) = do new <- gets soldiers >>= mapMNamedSoldier reviveSoldier n
                                           modify (\g -> g {soldiers = new})
