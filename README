@@ -29,21 +29,28 @@ Engine->Brain format
 
 This is what your brain gets from the engine on stdin.
 
-At the start of the game:
+AT THE START OF THE GAME:
 
 <yourteam>
 <map>
 <emptyline>
 
 yourteam: "A" or "B"
-map: m lines of n characters representing an nxm tile map.
-     The meanings of the tiles are:
-     . -- empty
-     # -- obstacle
-     A,B -- spawn of team A, spawn of team B
-     a,b -- base (flag) of team A, base of team B
+map: m lines of n characters representing an mxn tile map.
 
-For each round:
+NB! The coordinate system of the map is as follows:
+  - (0,0) is the first character on the first line
+  - y increases along one line and
+  - x increases with every line change.
+    
+The meanings of the tiles are:
+  . -- empty
+  # -- obstacle
+  A,B -- spawn of team A, spawn of team B
+  a,b -- base (flag) of team A, base of team B
+
+
+FOR EACH ROUND:
 
 <yourpoints> <enemypoints>
 Flag <x> <y>
