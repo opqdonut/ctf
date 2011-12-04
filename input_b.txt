@@ -1,142 +1,198 @@
 N L
+L L
 M L (8,9)
 
 N L
+L L
 M U (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
 M S (8,9)
 
 N L
+L L
+M S (8,9)
+
+N U
+L U
+M S (8,9)
+
+N U
+L U
+M S (8,9)
+
+N U
+L U
+M S (8,9)
+
+N U
+L U
+M S (8,9)
+
+N U
+L U
+M S (8,9)
+
+N U
+L U
+M S (8,9)
+
+N U
+L U
+M S (8,9)
+
+N U
+L U
+M S (8,9)
+
+N S
+L S
+M S (8,9)
+
+N U
+L U
 M S (8,9)
 
 N U
 M S (8,9)
+L U
 
 N U
+L U
 M S (8,9)
 
 N U
+L U
 M S (8,9)
 
 N U
-M S (8,9)
-
-N U
-M S (8,9)
-
-N U
-M S (8,9)
-
-N U
-M S (8,9)
-
-N U
-M S (8,9)
-
-N U
-M S (8,9)
-
-N U
-M S (8,9)
-L U (7,13)
-
-N U
-M S (8,9)
-
-N U
-M S (8,9)
-
-N U
+L U
 M S (8,9)
 
 N R
+L R
 M S (8,9)
 
 N R
+L R
 M S (8,9)
 
 N R
+L R
 M S (8,9)
 
 N R
+L R
 M S (8,9)
 
 N R
+L R
 M S (8,9)
 
 N R
+L R
 M S (8,9)
 
 N R
+L R
 M S (8,9)
 
 N R
+L R
 
 N R
+L R
 
 N R
+L R
 
 N R
+L R
 
 N R
+L R
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N D
+L D
 
 N S
 

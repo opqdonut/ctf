@@ -147,7 +147,7 @@ maybePickUpFlag ss =
      opposingFlag <- getFlag opponent
      solds <- gets $ fromSoldiers.soldiers
      if flagCoord opposingFlag == soldierCoord ss
-        && all (\ss -> holdsFlag ss /= Just opponent) solds
+        && all (\ss' -> holdsFlag ss' /= Just opponent) solds
        then return ss {holdsFlag = Just opponent}
        else return ss
 
@@ -194,8 +194,10 @@ processSoldier Nothing = coolDown
 
 processCommands :: [Command]
                    -> EventM ()
-processCommands cs = do new <- gets soldiers >>= mapMSoldiers f
-                        modify (\g -> g {soldiers = new})
+processCommands cs = do names <- gets (map soldierName.fromSoldiers.soldiers)
+                        forM_ names $ \n ->
+                          do new <- gets soldiers >>= mapMNamedSoldier f n
+                             modify (\g -> g {soldiers = new})
   where f ss = processSoldier (find ((==soldierName ss).commandName) cs) ss
 
 -- | Event handling

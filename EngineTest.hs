@@ -64,4 +64,4 @@ testGame n g = do moves <- arbitraryMoves g
                            
 main = do (rules,board) <- readConfFile "config"
           let g = mkGame board rules
-          quickCheck $ testGame (nRounds rules) g
+          quickCheck $ testGame (nRounds rules*100) g
