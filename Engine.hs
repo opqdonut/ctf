@@ -19,10 +19,10 @@ type Trans = (Int,Int)
 
 trans :: Dir -> Trans
 trans S = (0,0)
-trans U = (-1,0)
-trans D = (1,0)
-trans L = (0,-1)
-trans R = (0,1)
+trans U = (0,-1)
+trans D = (0,1)
+trans L = (-1,0)
+trans R = (1,0)
 
 manhattan :: Coord -> Coord -> Int
 manhattan (a,b) (c,d) = abs (a-c) + abs (b-d)
