@@ -250,7 +250,7 @@ data Board = Board {boardContents :: Array Coord Tile}
            deriving Show
 
 drawBoard (Board arr) = unlines $
-                        [ concat [ drawTile (arr!(y,x)) | x <-[0..w] ]
+                        [ concat [ drawTile (arr!(x,y)) | x <-[0..w] ]
                         | y <- [0..h] ]
   where (w,h) = snd $ bounds arr
              
@@ -339,7 +339,7 @@ drawGame :: Game -> DrawMode -> String
 drawGame g dm = unlines $ map (intercalate " " . map d) coords
   where (w,h) = boardSize . board $ g
         coords :: [[Coord]]
-        coords = map (\x -> map ((,)x) [0..h-1]) [0..w-1]
+        coords = map (\y -> map (flip (,) y) [0..w-1]) [0..h-1]
         drawn = case dm of DrawBoard -> M.empty
                            DrawAll -> drawGame' g
         d c = M.findWithDefault (drawBoardCoord g c) c drawn

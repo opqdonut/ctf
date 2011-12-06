@@ -44,7 +44,7 @@ readBoard strs = if ok
   where h = length strs
         w = length (head strs)
         ok = all (==w) $ map length strs
-        tiles = map f (concat strs)
+        tiles = map f (concat $ transpose strs)
         f x = case x of '#' -> Obstacle
                         '.' -> Empty
                         'A' -> Spawn A

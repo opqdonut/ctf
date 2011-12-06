@@ -40,8 +40,8 @@ map: m lines of n characters representing an mxn tile map.
 
 NB! The coordinate system of the map is as follows:
   - (0,0) is the first character on the first line
-  - y increases along one line and
-  - x increases with every line change.
+  - x increases along one line and
+  - y increases with every line change.
     
 The meanings of the tiles are:
   . -- empty
