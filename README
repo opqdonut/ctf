@@ -21,7 +21,8 @@ This is what your brain should output on stdout:
 <soldiername> <movementdirection> [<grenadecoord>]
 ...
 
-movementdirection: either U, L, D, R (the 4 directions) or S (stay still)
+movementdirection: either U (meaning y--), L (x--), D (y++), R (x++)
+or S (stay still)
 grenadecoord: optional and should be of the form (<x>,<y>)
 
 Engine->Brain format
