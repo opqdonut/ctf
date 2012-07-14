@@ -12,6 +12,31 @@ $ ./dist/build/ctf/ctf config "(cd brains; java RandomWalk)" "(cd brains; java R
 
 Example input_[ab].txt included.
 
+Rules of the game
+=================
+
+The idea of the game is to capture the enemy's flag and bring it to
+your home base. Killing enemy soldiers gives additional points.
+
+The game is carried out on a 2d grid that contains walls, a base for
+both teams, and a spawn point for both teams. The flags are initially
+in the bases.
+
+The game is turn-based. Both teams submit orders for their all of
+their soldiers, and the orders are carried out simultaneously. During
+a turn, a soldier can move (up, down, left or right) and/or throw a
+grenade.
+
+Grenades can only be thrown to a certain distance. A grenade thrown on
+turn N explodes in the beginning of turn N+3. The grenade explosion
+kills all soldiers in the 3x3 square centered on the grenade. Grenades
+are not visible to the enemy. Grenades have a cooldown time, which
+means that you have to wait a certain amount of time before the same
+soldier can throw a new grenade.
+
+A dead soldier respawns in the team's spawn point after being dead for
+one round.
+
 Brain->Engine communication format
 ==================================
 
@@ -65,7 +90,9 @@ Enemy <name> <x> <y> <alive> <flag>
 Enemy <name> <x> <y> <alive> <flag>
 <an empty line signals the end>
 
-x, y, cooldown, countdown: integers
+x, y: integers
+cooldown: integer. 0 means you can throw a grenade
+countdown: integer
 name: matched by the regex [A-Za-z]+
 alive: either "True" or "False"
 flag: either "No", "A", or "B"
@@ -77,7 +104,15 @@ Flag and exactly one EnemyFlag record.
 Config format
 =============
 
-The first line should contain a Rules struct in Haskell format.
+The first line should contain a Rules struct in Haskell format. The
+fields are:
+
+nRounds - number of rounds
+nSoldiers - number of soldiers per team
+pointsKill - how many points a kill awards
+pointsCapture - how many points capturing a flag awards
+grenadeRange - the range of a grenade
+grenadeCooldown - how long a soldier has to wait before throwing a new grenade
 
 The rest of the lines should describe the game map, one character per
 tile, rows ended by newlines. All lines should be of equal length. The
@@ -106,6 +141,3 @@ TODO
 ====
 
 - timeouts for reading commands?
-
-
-
