@@ -7,8 +7,8 @@ $ cabal configure
 $ cabal build
 $ ./dist/build/ctf/ctf config "(cat input_a.txt; cat >/dev/null)" "(cat input_b.txt; cat >/dev/null)"
 
-$ (cd brains; javac Thing RandomWalk)
-$ ./dist/build/ctf/ctf config "(cd brains; java RandomWalk)" "(cd brains; java RandomWalk)"
+$ (cd brains; javac *.java)
+$ ./dist/build/ctf/ctf config "(cd brains; java RandomWalk)" "(cd brains; java Capturer)"
 
 Example input_[ab].txt included.
 
