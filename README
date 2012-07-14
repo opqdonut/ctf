@@ -37,6 +37,12 @@ soldier can throw a new grenade.
 A dead soldier respawns in the team's spawn point after being dead for
 one round.
 
+A flag is picked up by walking into the same square that it is in. You
+can only pick up your enemy's flag. Once a flag gets moved to the base
+of the opposing team, the opposing team gets points and the flag warps
+back to its home base. If a soldier carrying a flag dies, the flag
+stays where it is.
+
 Brain->Engine communication format
 ==================================
 
