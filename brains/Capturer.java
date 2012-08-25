@@ -6,30 +6,64 @@ public class Capturer {
 
     static Random r = new Random();
 
+    static char[][] map;
+
+    static String team;
+
+    static int homex, homey;
+
     public static void main(String[] args) {
 
         Scanner s = new Scanner(System.in);
 
-        while (!"".equals(s.nextLine())) {}; // skip map
+        ArrayList<String> mapLines = new ArrayList<String>();
+        
+        team = s.nextLine();
+
+        String line = s.nextLine();
+        while (!line.equals("")) {
+            mapLines.add(line);
+            line = s.nextLine();
+        }
+
+        int h = mapLines.size();
+        int w = mapLines.get(0).length();
+
+        map = new char[h][w];
+
+        for (int i = 0; i<h; i++) {
+            for (int j = 0; j<w; j++) {
+                map[i][j] = mapLines.get(i).charAt(j);
+                if (map[i][j] == team.toLowerCase().charAt(0)) {
+                    homex = j;
+                    homey = i;
+                }
+            }
+        }
 
         while (true)
             oneRound(s);
     }
 
+    public static boolean moveable(int x, int y) {
+        return x>=0 && x<map[0].length
+            && y>=0 && y<map.length
+            && map[y][x] != '#';
+    }
+
     public static String towards(int x, int y, int xdest, int ydest) {
         int xdiff = xdest-x;
         int ydiff = ydest-y;
-        if (Math.abs(xdiff) > Math.abs(ydiff)) {
-            if (xdiff < 0) {
-                return "L";
-            }
+
+        if (xdiff < 0 && moveable (x-1,y))
+            return "L";
+        if (xdiff > 0 && moveable (x+1,y))
             return "R";
-        } else {
-            if (ydiff < 0) {
-                return "U";
-            }
+        if (ydiff < 0)
+            return "U";
+        if (ydiff > 0)
             return "D";
-        }
+        return "S";
     }
 
     public static String randomDirection(int x, int y, int xdest, int ydest) {
@@ -42,14 +76,19 @@ public class Capturer {
         }
     }
 
-    public static String maybeThrow(int x, int y, ArrayList<Things.Enemy> them) {
+    public static String maybeThrow(Things.Soldier s, ArrayList<Things.Enemy> them) {
+        if (s.cooldown > 0) {
+            return "";
+        }
+        
         for (Things.Enemy e : them) {
-            if (Math.abs(x-e.x)+Math.abs(y-e.y)<=10) {
+            if (Math.abs(s.x-e.x)+Math.abs(s.y-e.y)<=10) {
                 int yoff = r.nextInt(3)-1;
                 int xoff = r.nextInt(3)-1;
                 return "("+(e.x+xoff)+","+(e.y+yoff)+")";
             }
         }
+
         return "";
     }
 
@@ -77,8 +116,14 @@ public class Capturer {
         }
         
         for (Things.Soldier s : us) {
-            String dir = randomDirection(s.x,s.y,ef.x,ef.y);
-            String gren = maybeThrow(s.x,s.y,them);
+            
+            String dir;
+            if (s.flag.equals("No")) {
+                dir = randomDirection(s.x,s.y,ef.x,ef.y);
+            } else {
+                dir = randomDirection(s.x,s.y,homex,homey);
+            }
+            String gren = maybeThrow(s,them);
             System.out.println(s.name+" "+dir+" "+gren);
         }
 
